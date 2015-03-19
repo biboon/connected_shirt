@@ -1,2 +1,11 @@
 Sujet.pdf
 info_trame.txt
+Communication/*.a
+Communication/*.o
+Scripts/output.txt
+Serveur/*.a
+Serveur/*.o
+TShirt/*.a
+TShirt/*.o
+Threads/*.a
+Threads/*.o
