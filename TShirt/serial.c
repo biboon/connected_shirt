@@ -16,8 +16,8 @@ void init_serial(int speed) {
     /* Set 8 bits character and 1 stop bit */
     UCSR0C = (1 << UCSZ01 | 1 << UCSZ00);
 
-    /* Set on UART baud doubler */
-    UCSR0A &= (1 << U2X0);
+    /* Set on UART baud doubler */ /* Set on for direct communication and off(~) with Xbee */
+    /* UCSR0A &= (1 << U2X0); */
 }
 
 void send_serial(unsigned char c) {

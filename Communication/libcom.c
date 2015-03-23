@@ -22,6 +22,7 @@
 
 #include "libcom.h"
 
+#if 0
 /**** Fonctions de gestion des sockets ****/
 /** Impression d'une adresse generale **/
 void afficheAdresse(FILE *flux, void *ip, int type) {
@@ -106,7 +107,7 @@ void messageUDP(char *hote, char *service, unsigned char *message, int taille) {
     /* Fermeture de la socket d'envoi */
     close(s);
 }
-
+#endif
 
 /** Fonction d'initialisation de serveur UDP, service: port **/
 int initialisationSocketUDP(char *service) {
@@ -150,7 +151,7 @@ int boucleServeurUDP(int s, int (*traitement)(unsigned char *, int)) {
         unsigned char packet[MSG_LENGTH];
         int nboctets = recvfrom(s, packet, MSG_LENGTH, 0, (struct sockaddr *)&adresse, &taille);
         if (nboctets < 0) { perror("boucleServeurUDP.recvfrom"); exit(EXIT_FAILURE); }
-        if (traitement(message, nboctets) < 0) break;
+        if (traitement(packet, nboctets) < 0) break;
     }
     return 0;
 }
