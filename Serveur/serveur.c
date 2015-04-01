@@ -2,33 +2,45 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include "libcom.h"
 
-int traitement(unsigned char *packet, int nb) {
-    printf("%x", packet);
+int traitementMsg(unsigned char *packet, int nb) {
+    #ifdef DEBUG
+        fprintf(stderr, "New packet succesfully received! size: %d\n", nb);
+    #endif
+    //TODO
+    return 0;
+}
+
+int traitementTCP(int fd) {
+    #ifdef DEBUG
+        fprintf(stderr, "Started new TCP client thread on fd: %d\n", fd);
+    #endif
+    //TODO
+    return 0;
 }
 
 int main(int argc,char *argv[]) {
     /* Analyzing options */
-    if (argc != 2){
-        fprintf(stderr, "Syntax: %s <port>\n", argv[0]);
-        exit(EXIT_FAILURE);
+    int option = 0;
+    char* port = "4000";
+    while((option = getopt(argc, argv, "p:")) != -1) {
+        if (option == 'p') port = optarg;
+        else fprintf(stderr, "Unrecognized option, using default port\n");
     }
-    /* Server initialization */
-    char * port = argv[1]; // Port used to connect
-    #ifdef DEBUG
-        fprintf(stdout, "Port: %s\n", port);
-    #endif
     
-    /* Socket description */
-    /* TODO */
-    int sockUDP = initialisationSocketUDP(port);
-    if (sockUDP < 0) { perror("serveur.initialisationSocketUDP"); exit(EXIT_FAILURE); }
-    boucleServeurUDP(sockUDP, &traitement);
+    /* Starting UDP messages server */
+    serveurMessages(port, &traitementMsg);
+    
+    /* Starting TCP server */
+    int sockTCP = initialisationServeur("4200", MAX_CONNEXIONS);
+    boucleServeur(sockTCP, &traitementTCP);
+    
     
     return 0;
 }
