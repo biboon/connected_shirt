@@ -4,7 +4,7 @@ OBJS = serveur.o
 #LIBS = -lpthread
 LOCAL_LIBS  = -L ../Communication # -L ../Threads
 LOCAL_LIBS += -lcom # -lthrd
-CFLAGS     += -DDEBUG -I ../Communication # -I ../Threads
+CFLAGS     += -I ../Communication # -I ../Threads
 
 # Cible generale
 all: serveur

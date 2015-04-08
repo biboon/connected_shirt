@@ -19,7 +19,7 @@ void afficheHote(FILE *flux, struct hostent *hote, int type); //Impression des i
 
 /**** Fonctions pour le serveur TCP ****/
 int initialisationServeur(char *service, int connexions);
-int boucleServeur(int s, int (*traitement)(unsigned char *, int));
+int boucleServeur(int ecoute, int (*traitement)(int));
 
 /**** Fonctions pour le serveur UDP ****/
 void messageUDP(char *hote, char *service, unsigned char *message, int taille); // Fonction d'envoi de message par UDP, hote: @serveur, service: port

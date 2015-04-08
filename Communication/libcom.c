@@ -21,6 +21,7 @@
 #include <fcntl.h>
 
 #include "libcom.h"
+#include "libthrd.h"
 
 #if 0
 /**** Fonctions de gestion des sockets ****/
@@ -146,7 +147,7 @@ int initialisationSocketUDP(char *service) {
 /** Fonction de boucle serveur **/
 int boucleServeurUDP(int s, int (*traitement)(unsigned char *, int)) {
     #ifdef DEBUG
-        fprintf(stderr, "Started sever loop with fd: %d...\n", s);
+        fprintf(stderr, "Started sever loop with sock: %d...\n", s);
     #endif
     while (1) {
         struct sockaddr_storage adresse;
@@ -171,7 +172,7 @@ void serveurMessages(char *port, int (*traitement)(unsigned char *, int)) {
     int sockUDP = initialisationSocketUDP(port);
     if (sockUDP < 0) { perror("serveurMessages.initialisationSocketUDP"); exit(EXIT_FAILURE); }
     #ifdef DEBUG
-        fprintf(stderr, "Socket initialized on fd: %d\n", sockUDP);
+        fprintf(stderr, "Socket initialized on sock: %d\n", sockUDP);
     #endif
     boucleServeurUDP(sockUDP, traitement);
 }
@@ -217,7 +218,7 @@ int initialisationServeur(char *service, int connexions) {
     status = listen(s, connexions);
     if (status < 0) exit(EXIT_FAILURE);
     #ifdef DEBUG
-        fprintf(stderr, "Socket succesfully created on fd: %d\n", s);
+        fprintf(stderr, "Socket successfully created on sock: %d\n", s);
     #endif
     return s;
 }
@@ -228,10 +229,12 @@ int boucleServeur(int ecoute, int (*traitement)(int)) {
     #ifdef DEBUG
         fprintf(stderr, "Started TCP server loop...\n");
     #endif
+    int new_fd = -1;
     while (1) {
         new_fd = accept(ecoute, NULL, NULL);
         if (new_fd < 0) { perror("boucleServeur.accept"); exit(EXIT_FAILURE); }
-        else traitement(new_fd);
+        // else traitement(new_fd);
+        else lanceThread((void *) &traitement, &new_fd, NULL);
     }
     return 0;
 }

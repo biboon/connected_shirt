@@ -2,12 +2,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <getopt.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include "libcom.h"
+#include "libthrd.h"
 
 int traitementMsg(unsigned char *packet, int nb) {
     #ifdef DEBUG
@@ -17,11 +19,18 @@ int traitementMsg(unsigned char *packet, int nb) {
     return 0;
 }
 
-int traitementTCP(int fd) {
+int traitementTCP(int sock) {
     #ifdef DEBUG
-        fprintf(stderr, "Started new TCP client thread on fd: %d\n", fd);
+        fprintf(stderr, "Started new TCP listening loop thread on sock: %d\n", sock);
     #endif
-    //TODO
+    FILE* fd = fdopen(sock, "r");
+    if (fd == NULL) { perror("traitementTCP.fdopen"); exit(EXIT_FAILURE); }
+    fprintf(fd, "Hello World!\n");
+    if (fclose(fd) < 0) { perror("traitementTCP.fclose"); exit(EXIT_FAILURE); }
+    #ifdef DEBUG
+        fprintf(stderr, "Closed sock: %d\n", sock);
+    #endif
+    while (1) printf("blblblbl\n");
     return 0;
 }
 
@@ -35,12 +44,17 @@ int main(int argc,char *argv[]) {
     }
     
     /* Starting UDP messages server */
-    serveurMessages(port, &traitementMsg);
+    //serveurMessages(port, &traitementMsg);
     
     /* Starting TCP server */
+    #ifdef DEBUG
+        fprintf(stderr, "Initializing TCP server on port 4200\n");
+    #endif
     int sockTCP = initialisationServeur("4200", MAX_CONNEXIONS);
+    #ifdef DEBUG
+        fprintf(stderr, "Starting TCP server loop on port 4200 listening sock: %d\n", sockTCP);
+    #endif
     boucleServeur(sockTCP, &traitementTCP);
-    
     
     return 0;
 }

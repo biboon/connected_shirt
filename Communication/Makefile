@@ -1,6 +1,6 @@
 # Makefile pour generer la bibliotheque de fonctions de communication
 CC = gcc
-FLAGS = -Wall -DDEBUG
+FLAGS = -Wall
 LIB = libcom
 
 # Regle generale
