@@ -1,6 +1,6 @@
 # Makefile pour generer la bibliotheque de threads
 CC = gcc
-FLAGS = -Wall
+FLAGS = -Wall -lpthread
 LIB = libthrd
 
 # Regle generale

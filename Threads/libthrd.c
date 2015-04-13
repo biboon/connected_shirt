@@ -1,39 +1,70 @@
+/* Ce fichier contient des fonctions de thread */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "libthrd.h"
 
+int global = 0;
 
-/* Cette fonction prend *funcParameters en paramètre et lance le thread */
-int getFunction(Parameters funcParameters) {
-    pthread_t tid;
-    pthread_attr_t tattr;
+void* lanceFunction(void *arg) {
+    /* Copie de l'argument */
+    Parameters *funcParameters = arg;
+    /* Appel de la fonction avec l'argument dans la structure */
+    funcParameters->fonction(funcParameters->argument);
+    /* Liberation de la memoire */
+    free(funcParameters->argument);
+    free(funcParameters);
     
-    int status = pthread_attr_init(&tattr);
-    status += pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
-    status += pthread_create(&tid, &tattr, funcParameters.fonction, funcParameters.argument);
-    
-    if (ret < 0) { perror("getFunction.pthread_create"); return ret; }
-    #ifdef DEBUG
-        fprintf(stderr, "Started thread tid: %d\n", tid);
-    #endif
-    
-    return 0;
+    pthread_exit(NULL);
 }
 
 
-int lanceThread(void *(*func)(void *), void *arg, int size) {    
+int lanceThread(void (*func)(void *), void *arg, int size)
+{    
     Parameters *funcParameters;
+    pthread_t tid;
+    pthread_attr_t tattr;
+    int ret = 0;
+    void *argument;
     
-    funcParameters = (Parameters *) malloc(sizeof(Parameters));
+    argument = malloc(size);
+    memcpy(argument, arg, (size_t)size);
+    
+    funcParameters = (Parameters*)malloc(sizeof(Parameters));
+    
     funcParameters->fonction = func;
-    funcParameters->argument = arg;
+    funcParameters->argument = argument;
     
-    #ifdef DEBUG
-        fprintf(stderr, "Attempting to start new thread\n");
-    #endif
-    if (getFunction(*funcParameters) < 0) { perror("lanceThread.getFunction"); exit(EXIT_FAILURE); }
+    ret = pthread_attr_init(&tattr);
+    ret += pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
+    ret += pthread_create(&tid, &tattr, lanceFunction, funcParameters);
+    
+    return ret;
+}
+
+void printlol(int* chiffre)
+{
+    global += 1000;
+    printf("Je suis un calamar %d\n", *chiffre);
+    
+    pthread_exit(NULL);
+}
+
+
+int main(void)
+{
+    int size = 4;
+    int argument = 12;
+//    printf("pid:%d\n",getpid());
+    lanceThread((void*) &printlol, &argument , size);
+    
+
+    pthread_exit(0);
+    
+    printf("global : %d\n",global);
     
     return 0;
 }

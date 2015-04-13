@@ -3,12 +3,11 @@
 
 typedef struct parameters
 {
-	void *(*fonction)(void *);
-	void *argument;
+    void (*fonction)(void *);
+    void *argument;
 } Parameters;
 
-int getFunction(Parameters funcParameters);
-
-int lanceThread(void *(*func)(void *), void *arg, int val);
+void* lanceFunction(void *arg);
+int lanceThread(void (*threadTCP)(void *), void *arg, int val);
 
 #endif
