@@ -4,6 +4,7 @@
 
 #include "serial.h"
 
+static int send_serial_printf(char c, FILE *stream) ;
 static FILE mystdout = FDEV_SETUP_STREAM(send_serial_printf, NULL, _FDEV_SETUP_WRITE);
 
 void init_serial(int speed) {
@@ -20,12 +21,12 @@ void init_serial(int speed) {
     UCSR0A &= (1 << U2X0);
 }
 
-void send_serial(unsigned char c) {
+void send_serial(char c) {
     loop_until_bit_is_set(UCSR0A, UDRE0);
     UDR0 = c;
 }
 
-unsigned char get_serial(void) {
+char get_serial(void) {
     loop_until_bit_is_set(UCSR0A, RXC0);
     return UDR0;
 }
@@ -35,7 +36,7 @@ void init_printf(void) {
     stdout = &mystdout;
 }
 
-int send_serial_printf(unsigned char c, FILE *stream) {
+static int send_serial_printf(char c, FILE *stream) {
     if (c == '\n') send_serial('\r');
     send_serial(c);
     return 0;

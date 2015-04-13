@@ -42,8 +42,6 @@ void build_packet (unsigned char* data, unsigned char* packet) {
         if (i != 26) {
             to_add = ((packet[i] << 8) & 0xFF00);
             if (i != 32) to_add += (packet[i + 1] & 0xFF);
-            /*if (i != 32) to_add = ((packet[i] << 8) & 0xFF00) + (packet[i + 1] & 0xFF);
-            else to_add = ((packet[i] << 8) & 0xFF00);*/
             diff = 0xFFFF - cksm;
             if (to_add > diff) cksm = to_add - diff;
             else cksm += to_add;
@@ -60,7 +58,6 @@ void build_packet (unsigned char* data, unsigned char* packet) {
     if (to_add > diff) cksm = to_add - diff;
     else cksm += to_add;
     cksm = ~cksm; /* Final one's complement */
-    
     /* Setting UDP checksum in packet */
     packet[26] = (cksm >> 4) & 0xFF;
     packet[27] = cksm & 0xFF;

@@ -21,7 +21,6 @@
 #include <fcntl.h>
 
 #include "libcom.h"
-#include "libthrd.h"
 
 #if 0
 /**** Fonctions de gestion des sockets ****/
@@ -233,8 +232,7 @@ int boucleServeur(int ecoute, int (*traitement)(int)) {
     while (1) {
         new_fd = accept(ecoute, NULL, NULL);
         if (new_fd < 0) { perror("boucleServeur.accept"); exit(EXIT_FAILURE); }
-        // else traitement(new_fd);
-        else lanceThread((void *) &traitement, &new_fd, NULL);
+        else traitement(new_fd);
     }
     return 0;
 }

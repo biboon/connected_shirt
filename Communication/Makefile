@@ -17,4 +17,4 @@ $(LIB).a: $(LIB).o
 
 # La cible de nettoyage
 clean: 
-	rm -f *.o $(LIB).a
+	rm -f core *.o $(LIB).a
