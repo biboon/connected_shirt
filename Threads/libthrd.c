@@ -7,8 +7,6 @@
 
 #include "libthrd.h"
 
-int global = 0;
-
 void* lanceFunction(void *arg) {
     /* Copie de l'argument */
     Parameters *funcParameters = arg;
@@ -43,28 +41,4 @@ int lanceThread(void (*func)(void *), void *arg, int size)
     ret += pthread_create(&tid, &tattr, lanceFunction, funcParameters);
     
     return ret;
-}
-
-void printlol(int* chiffre)
-{
-    global += 1000;
-    printf("Je suis un calamar %d\n", *chiffre);
-    
-    pthread_exit(NULL);
-}
-
-
-int main(void)
-{
-    int size = 4;
-    int argument = 12;
-//    printf("pid:%d\n",getpid());
-    lanceThread((void*) &printlol, &argument , size);
-    
-
-    pthread_exit(0);
-    
-    printf("global : %d\n",global);
-    
-    return 0;
 }

@@ -19,25 +19,32 @@ int traitementMsg(unsigned char *packet, int nb) {
     return 0;
 }
 
-int traitementTCP(int sock) {
+int traitementTCP(int* arg) {
+    int sock = *arg;
     #ifdef DEBUG
         fprintf(stderr, "Started new TCP listening loop thread on sock: %d\n", sock);
     #endif
     FILE* fd = fdopen(sock, "r");
     if (fd == NULL) { perror("traitementTCP.fdopen"); exit(EXIT_FAILURE); }
     fprintf(fd, "Hello World!\n");
+    sleep(15);
     if (fclose(fd) < 0) { perror("traitementTCP.fclose"); exit(EXIT_FAILURE); }
     #ifdef DEBUG
         fprintf(stderr, "Closed sock: %d\n", sock);
     #endif
-    while (1) printf("blblblbl\n");
+    return 0;
+}
+
+int threadedTraitementTCP (int sock) {
+    int tmp = sock;
+    lanceThread((void*) &traitementTCP, (void *) &tmp, sizeof(tmp));
     return 0;
 }
 
 int main(int argc,char *argv[]) {
     /* Analyzing options */
     int option = 0;
-    char* port = "4000";
+    char* port = "12345";
     while((option = getopt(argc, argv, "p:")) != -1) {
         if (option == 'p') port = optarg;
         else fprintf(stderr, "Unrecognized option, using default port\n");
@@ -54,7 +61,7 @@ int main(int argc,char *argv[]) {
     #ifdef DEBUG
         fprintf(stderr, "Starting TCP server loop on port 4200 listening sock: %d\n", sockTCP);
     #endif
-    boucleServeur(sockTCP, &traitementTCP);
+    boucleServeur(sockTCP, &threadedTraitementTCP);
     
     return 0;
 }
