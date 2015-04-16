@@ -9,8 +9,8 @@ typedef struct udpParameters
     
 
 void traitementUDP(void* arg);
-int threadedTraitementUDP(unsigned char* packet, int size);
+void threadedTraitementUDP(unsigned char* packet, int size);
 void traitementTCP (void* arg);
-int threadedTraitementTCP (int sock);
+void threadedTraitementTCP (int sock);
 
 #endif

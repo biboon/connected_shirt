@@ -12,13 +12,13 @@
 
 /**** Fonctions pour le serveur TCP ****/
 int initialisationServeur(char *service, int connexions);
-int boucleServeur(int ecoute, int (*traitement)(int));
+int boucleServeur(int ecoute, void (*traitement)(int));
 
 /**** Fonctions pour le serveur UDP ****/
 void messageUDP(char *hote, char *service, unsigned char *message, int taille); // Fonction d'envoi de message par UDP, hote: @serveur, service: port
 int initialisationSocketUDP(char *service); // Fonction d'initialisation de serveur UDP, service: port
-int boucleServeurUDP(int s, int (*traitement)(unsigned char *, int)); // Fonction de boucle serveur, message traite par fct traitement
-void serveurMessages(char *port, int (*traitement)(unsigned char *, int)); // Fonction de demarrage de serveur UDP et d'ecoute
-void serveurTCP(char *port, int (*traitement)(int)); // Fonction de demarrage de serveur TCP
+int boucleServeurUDP(int s, void (*traitement)(unsigned char *, int)); // Fonction de boucle serveur, message traite par fct traitement
+void serveurMessages(char *port, void (*traitement)(unsigned char *, int)); // Fonction de demarrage de serveur UDP et d'ecoute
+void serveurTCP(char *port, void (*traitement)(int)); // Fonction de demarrage de serveur TCP
 
 #endif

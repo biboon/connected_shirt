@@ -93,7 +93,7 @@ int initialisationSocketUDP(char *service) {
 
 
 /** Fonction de boucle serveur **/
-int boucleServeurUDP(int s, int (*traitement)(unsigned char *, int)) {
+int boucleServeurUDP(int s, void (*traitement)(unsigned char *, int)) {
     #ifdef DEBUG
         fprintf(stderr, "Started server loop with sock #%d...\n", s);
     #endif
@@ -106,14 +106,14 @@ int boucleServeurUDP(int s, int (*traitement)(unsigned char *, int)) {
         #endif
         int nboctets = recvfrom(s, packet, MSG_LENGTH, 0, (struct sockaddr *)&adresse, &taille);
         if (nboctets < 0) { perror("boucleServeurUDP.recvfrom"); exit(EXIT_FAILURE); }
-        if (traitement(packet, nboctets) < 0) break;
+        traitement(packet, nboctets);
     }
     return 0;
 }
 
 
 /** Fonction de demarrage de serveur UDP et d'ecoute **/
-void serveurMessages(char *port, int (*traitement)(unsigned char *, int)) {
+void serveurMessages(char *port, void (*traitement)(unsigned char *, int)) {
     #ifdef DEBUG
         fprintf(stderr, "Starting UDP messages server on port %s\n", port);
     #endif
@@ -173,7 +173,7 @@ int initialisationServeur(char *service, int connexions) {
 
 
 /** boucle du serveur TCP **/
-int boucleServeur(int ecoute, int (*traitement)(int)) {
+int boucleServeur(int ecoute, void (*traitement)(int)) {
     #ifdef DEBUG
         fprintf(stderr, "Started TCP server loop...\n");
     #endif
@@ -188,7 +188,7 @@ int boucleServeur(int ecoute, int (*traitement)(int)) {
 
 
 /** Fonction de demarrage de serveur TCP **/
-void serveurTCP(char *port, int (*traitement)(int)) {
+void serveurTCP(char *port, void (*traitement)(int)) {
     #ifdef DEBUG
         fprintf(stderr, "Initializing TCP server on port %s\n", port);
     #endif

@@ -25,7 +25,7 @@ void traitementUDP(void* arg) {
     #endif
 }
 
-int threadedTraitementUDP(unsigned char* packet, int size) {
+void threadedTraitementUDP(unsigned char* packet, int size) {
     int allocated = sizeof(UDPParameters) + size - 1;
     UDPParameters *param = (UDPParameters*) malloc(allocated);
     memcpy(param->packet, packet, size);
@@ -35,7 +35,6 @@ int threadedTraitementUDP(unsigned char* packet, int size) {
         perror("threadedTraitementUDP.lanceThread"); exit(EXIT_FAILURE);
     }
     free(param);
-    return 0;
 }
 
 void traitementTCP (void* arg) {
@@ -53,12 +52,11 @@ void traitementTCP (void* arg) {
     #endif
 }
 
-int threadedTraitementTCP (int sock) {
+void threadedTraitementTCP (int sock) {
     int tmp = sock;
     if (lanceThread(&traitementTCP, (void *) &tmp, sizeof(int)) < 0) {
         perror("threadedTraitementTCP.lanceThread"); exit(EXIT_FAILURE);
     }
-    return 0;
 }
 
 int main(int argc,char *argv[]) {

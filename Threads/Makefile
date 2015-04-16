@@ -1,5 +1,6 @@
 # Makefile pour generer la bibliotheque de threads
 LIB = libthrd
+CFLAGS += -lpthread
 
 # Regle generale
 all: $(LIB).a

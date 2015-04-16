@@ -1,10 +1,9 @@
 # Makefile pour generer le serveur 
 
 OBJS = serveur.o
-#LIBS = -lpthread
 LOCAL_LIBS  = -L ../Communication -L ../Threads
 LOCAL_LIBS += -lcom -lthrd
-CFLAGS     += -I ../Communication -I ../Threads
+CFLAGS     += -I ../Communication -I ../Threads -lpthread
 
 # Cible generale
 all: serveur
