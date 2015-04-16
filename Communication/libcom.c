@@ -22,57 +22,6 @@
 
 #include "libcom.h"
 
-#if 0
-/**** Fonctions de gestion des sockets ****/
-/** Impression d'une adresse generale **/
-void afficheAdresse(FILE *flux, void *ip, int type) {
-    char adresse[BUFSIZE];
-    inet_ntop(type, ip, adresse, BUFSIZE);
-    fprintf(flux, adresse);
-}
-
-
-/** Impression d'une adresse de socket **/
-void afficheAdresseSocket(FILE *flux, struct sockaddr_storage *padresse) {
-    void *ip;
-    int port;
-    if (padresse->ss_family == AF_INET) {
-        struct sockaddr_in *ipv4 = (struct sockaddr_in *) padresse;
-        ip = (void *) &ipv4->sin_addr;
-        port = ipv4->sin_port;
-    }
-    if (padresse->ss_family == AF_INET6) {
-        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) padresse;
-        ip = (void *) &ipv6->sin6_addr;
-        port = ipv6->sin6_port;
-    }
-    fprintf(flux, "Adresse IP%s : ", (padresse->ss_family == AF_INET) ? "v4" : "v6");
-    afficheAdresse(flux, ip, padresse->ss_family);
-    fprintf(flux, "\nPort de la socket : %d.\n", ntohs(port));
-}
-
-
-/** Impression des informations d'un hote **/
-void afficheHote(FILE *flux, struct hostent *hote, int type) {
-    char **params;
-
-    fprintf(flux, "Nom officiel : '%s'.\n", hote->h_name);
-    fprintf(flux, "Surnoms: ");
-    for (params = hote->h_aliases; *params != NULL; params++) {
-        fprintf(flux,"%s",*params);
-        if (*(params + 1) == NULL) fprintf(flux, ",");
-    }
-    fprintf(flux, "\n");
-    fprintf(flux, "Type des adresses   : %d.\n", hote->h_addrtype);
-    fprintf(flux, "Taille des adresses : %d.\n", hote->h_length);
-    fprintf(flux, "Adresses: ");
-    for (params = hote->h_addr_list; params[0] != NULL; params++) {
-        afficheAdresse(flux, (struct in_addr *)params, type);
-        if((*params + 1) != NULL) fprintf(flux, ",");
-    }
-    fprintf(flux, "\n");
-}
-#endif
 
 /**** Fonctions de serveur UDP ****/
 /** fonction d'envoi de message par UDP, hote: @serveur, service: port **/
@@ -146,7 +95,7 @@ int initialisationSocketUDP(char *service) {
 /** Fonction de boucle serveur **/
 int boucleServeurUDP(int s, int (*traitement)(unsigned char *, int)) {
     #ifdef DEBUG
-        fprintf(stderr, "Started sever loop with sock: %d...\n", s);
+        fprintf(stderr, "Started server loop with sock #%d...\n", s);
     #endif
     while (1) {
         struct sockaddr_storage adresse;
@@ -171,7 +120,7 @@ void serveurMessages(char *port, int (*traitement)(unsigned char *, int)) {
     int sockUDP = initialisationSocketUDP(port);
     if (sockUDP < 0) { perror("serveurMessages.initialisationSocketUDP"); exit(EXIT_FAILURE); }
     #ifdef DEBUG
-        fprintf(stderr, "Socket initialized on sock: %d\n", sockUDP);
+        fprintf(stderr, "Socket initialized on sock #%d\n", sockUDP);
     #endif
     boucleServeurUDP(sockUDP, traitement);
 }
@@ -217,13 +166,13 @@ int initialisationServeur(char *service, int connexions) {
     status = listen(s, connexions);
     if (status < 0) exit(EXIT_FAILURE);
     #ifdef DEBUG
-        fprintf(stderr, "Socket successfully created on sock: %d\n", s);
+        fprintf(stderr, "Socket successfully created on sock #%d\n", s);
     #endif
     return s;
 }
 
 
-/* boucle du serveur TCP */
+/** boucle du serveur TCP **/
 int boucleServeur(int ecoute, int (*traitement)(int)) {
     #ifdef DEBUG
         fprintf(stderr, "Started TCP server loop...\n");
@@ -235,4 +184,17 @@ int boucleServeur(int ecoute, int (*traitement)(int)) {
         else traitement(new_fd);
     }
     return 0;
+}
+
+
+/** Fonction de demarrage de serveur TCP **/
+void serveurTCP(char *port, int (*traitement)(int)) {
+    #ifdef DEBUG
+        fprintf(stderr, "Initializing TCP server on port %s\n", port);
+    #endif
+    int sockTCP = initialisationServeur(port, MAX_CONNEXIONS);
+    #ifdef DEBUG
+        fprintf(stderr, "Starting TCP server loop on port %s listening sock #%d\n", port, sockTCP);
+    #endif
+    boucleServeur(sockTCP, traitement);
 }

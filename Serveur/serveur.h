@@ -1,11 +1,16 @@
-/** fichier serveur.h **/
 #ifndef __SERVEUR_H__
 #define __SERVEUR_H__
 
-/** Constantes **/
+typedef struct udpParameters
+{
+    int size;
+    unsigned char packet[1];
+} UDPParameters;
+    
 
-/** Structures **/
-
-/** Variables publiques  **/
+void traitementUDP(void* arg);
+int threadedTraitementUDP(unsigned char* packet, int size);
+void traitementTCP (void* arg);
+int threadedTraitementTCP (int sock);
 
 #endif

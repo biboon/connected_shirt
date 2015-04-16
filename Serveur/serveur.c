@@ -4,64 +4,78 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 
 #include "libcom.h"
 #include "libthrd.h"
+#include "serveur.h"
 
-int traitementMsg(unsigned char *packet, int nb) {
+
+void traitementUDP(void* arg) {
+    UDPParameters* param = arg;
     #ifdef DEBUG
-        fprintf(stderr, "New packet succesfully received! size: %d\n", nb);
+        fprintf(stderr, "Started new UDP process thread, packet size: %d\n", param->size);
     #endif
-    //TODO
+    sleep(10);
+    #ifdef DEBUG
+        fprintf(stderr, "Finished processing UDP packet\n");
+    #endif
+}
+
+int threadedTraitementUDP(unsigned char* packet, int size) {
+    int allocated = sizeof(UDPParameters) + size - 1;
+    UDPParameters *param = (UDPParameters*) malloc(allocated);
+    memcpy(param->packet, packet, size);
+    param->size = size;
+    printf("%d", param->size);
+    if (lanceThread(&traitementUDP, (void *) param, allocated) < 0) {
+        perror("threadedTraitementUDP.lanceThread"); exit(EXIT_FAILURE);
+    }
+    free(param);
     return 0;
 }
 
-int traitementTCP(int* arg) {
-    int sock = *arg;
+void traitementTCP (void* arg) {
+    int sock = *((int *)arg);
     #ifdef DEBUG
-        fprintf(stderr, "Started new TCP listening loop thread on sock: %d\n", sock);
+        fprintf(stderr, "Started new TCP process thread on sock #%d\n", sock);
     #endif
     FILE* fd = fdopen(sock, "r");
     if (fd == NULL) { perror("traitementTCP.fdopen"); exit(EXIT_FAILURE); }
     fprintf(fd, "Hello World!\n");
-    sleep(15);
+    sleep(10);
     if (fclose(fd) < 0) { perror("traitementTCP.fclose"); exit(EXIT_FAILURE); }
     #ifdef DEBUG
-        fprintf(stderr, "Closed sock: %d\n", sock);
+        fprintf(stderr, "Closed sock #%d\n", sock);
     #endif
-    return 0;
 }
 
 int threadedTraitementTCP (int sock) {
     int tmp = sock;
-    lanceThread((void*) &traitementTCP, (void *) &tmp, sizeof(tmp));
+    if (lanceThread(&traitementTCP, (void *) &tmp, sizeof(int)) < 0) {
+        perror("threadedTraitementTCP.lanceThread"); exit(EXIT_FAILURE);
+    }
     return 0;
 }
 
 int main(int argc,char *argv[]) {
     /* Analyzing options */
     int option = 0;
-    char* port = "12345";
+    char* portUDP = "12345";
+    char* portTCP = "4200";
     while((option = getopt(argc, argv, "p:")) != -1) {
-        if (option == 'p') port = optarg;
+        if (option == 'p') portUDP = optarg;
         else fprintf(stderr, "Unrecognized option, using default port\n");
     }
     
     /* Starting UDP messages server */
-    //serveurMessages(port, &traitementMsg);
+    //serveurMessages(portUDP, &threadedTraitementUDP);
     
     /* Starting TCP server */
-    #ifdef DEBUG
-        fprintf(stderr, "Initializing TCP server on port 4200\n");
-    #endif
-    int sockTCP = initialisationServeur("4200", MAX_CONNEXIONS);
-    #ifdef DEBUG
-        fprintf(stderr, "Starting TCP server loop on port 4200 listening sock: %d\n", sockTCP);
-    #endif
-    boucleServeur(sockTCP, &threadedTraitementTCP);
+    serveurTCP(portTCP, &threadedTraitementTCP);
     
     return 0;
 }

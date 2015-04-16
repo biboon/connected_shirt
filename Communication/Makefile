@@ -1,6 +1,4 @@
 # Makefile pour generer la bibliotheque de fonctions de communication
-CC = gcc
-FLAGS = -Wall
 LIB = libcom
 
 # Regle generale
@@ -8,7 +6,7 @@ all: $(LIB).a
 
 # Les cibles pour la bibliotheque
 $(LIB).o: $(LIB).c $(LIB).h
-	$(CC) $(FLAGS) -o $(LIB).o -c $(LIB).c
+	$(CC) $(CFLAGS) -o $(LIB).o -c $(LIB).c
 
 # Cible de creation de la bibliotheque
 $(LIB).a: $(LIB).o
