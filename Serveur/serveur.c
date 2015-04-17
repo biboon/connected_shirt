@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
+#include <stdbool.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -12,6 +14,20 @@
 #include "libthrd.h"
 #include "serveur.h"
 
+/** Global variables **/
+static bool _stop = false;
+struct sigaction action;
+
+void hand(int sig) {
+    if (sig == SIGINT || sig == SIGQUIT) {
+        printf("SIGINT/SIGQUIT signal received, closing servers...\n");
+        stopServers();
+        _stop = true;
+    } else {
+        fprintf(stderr, "Unrecognized signal received, exiting\n");
+        exit(EXIT_FAILURE);
+    }
+}
 
 void threadedTraitementUDP(void* arg) {
     UDPParameters* param = arg;
@@ -47,7 +63,7 @@ void threadedTraitementTCP (void* arg) {
     sleep(10);
     if (fclose(fd) < 0) { perror("threadedTraitementTCP.fclose"); exit(EXIT_FAILURE); }
     #ifdef DEBUG
-        fprintf(stderr, "Closed sock #%d\n", sock);
+        fprintf(stderr, "Closed TCP sock #%d\n", sock);
     #endif
 }
 
@@ -71,19 +87,26 @@ int main(int argc,char *argv[]) {
     int option = 0;
     char* portUDP = "12345";
     char* portTCP = "4200";
-    
+    /* Getting options */
     while((option = getopt(argc, argv, "p:")) != -1) {
         if (option == 'p') portUDP = optarg;
         else fprintf(stderr, "Unrecognized option, using default UDP port\n");
     }
     
+    /* Signal handling initialization */
+    action.sa_handler = hand;
+    sigaction(SIGINT, &action, NULL);
+    sigaction(SIGQUIT, &action, NULL);
+    
     /* Starting UDP messages server */
     lanceThread(startUDPServer, (void*) portUDP, sizeof(portUDP));
-    
     /* Starting TCP server */
     lanceThread(startTCPServer, (void*) portTCP, sizeof(portTCP));
     
-    while(getLivingThreads() != 0) sleep(1);
+    /* Main process sleeping while servers are working */
+    while (!_stop) sleep(1);
+    /* Waiting for threads to terminate */
+    while (getLivingThreads() != 0) sleep(1);
     
     return 0;
 }

@@ -1,8 +1,4 @@
-/** fichier libcom.c **/
-/** Ce fichier contient des fonctions  **/
-/**  concernant les sockets.           **/
-
-/**** Fichiers d'inclusion ****/
+/** Ce fichier contient des fonctions  concernant les sockets  **/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -11,6 +7,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -21,6 +18,12 @@
 #include <fcntl.h>
 
 #include "libcom.h"
+
+
+static bool _stop = false;
+void stopServers() {
+    _stop = true;
+}
 
 
 /**** Fonctions de serveur UDP ****/
@@ -97,17 +100,20 @@ int boucleServeurUDP(int s, void (*traitement)(unsigned char *, int)) {
     #ifdef DEBUG
         fprintf(stderr, "Started server loop with sock #%d...\n", s);
     #endif
-    while (1) {
+    while (!_stop) {
         struct sockaddr_storage adresse;
         socklen_t taille = sizeof(adresse);
-        unsigned char packet[MSG_LENGTH];
+        unsigned char packet[UDP_BUFSIZE];
         #ifdef DEBUG
             fprintf(stderr, "Waiting for data to be received...\n");
         #endif
-        int nboctets = recvfrom(s, packet, MSG_LENGTH, 0, (struct sockaddr *)&adresse, &taille);
+        int nboctets = recvfrom(s, packet, UDP_BUFSIZE, 0, (struct sockaddr *)&adresse, &taille);
         if (nboctets < 0) { perror("boucleServeurUDP.recvfrom"); exit(EXIT_FAILURE); }
         traitement(packet, nboctets);
     }
+    #ifdef DEBUG
+        fprintf(stderr, "Closed UDP server\n");
+    #endif
     return 0;
 }
 
@@ -166,7 +172,7 @@ int initialisationServeur(char *service, int connexions) {
     status = listen(s, connexions);
     if (status < 0) exit(EXIT_FAILURE);
     #ifdef DEBUG
-        fprintf(stderr, "Socket successfully created on sock #%d\n", s);
+        fprintf(stderr, "TCP socket successfully created on sock #%d\n", s);
     #endif
     return s;
 }
@@ -178,11 +184,14 @@ int boucleServeur(int ecoute, void (*traitement)(int)) {
         fprintf(stderr, "Started TCP server loop...\n");
     #endif
     int new_fd = -1;
-    while (1) {
+    while (!_stop) {
         new_fd = accept(ecoute, NULL, NULL);
         if (new_fd < 0) { perror("boucleServeur.accept"); exit(EXIT_FAILURE); }
         else traitement(new_fd);
     }
+    #ifdef DEBUG
+        fprintf(stderr, "Closed TCP server\n");
+    #endif
     return 0;
 }
 

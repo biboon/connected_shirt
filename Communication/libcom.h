@@ -6,9 +6,10 @@
 #define __LIBCOM_H__
 
 /**** Constantes ****/
-#define BUFSIZE 1024
-#define MSG_LENGTH 5
+#define UDP_BUFSIZE 5
 #define MAX_CONNEXIONS 8
+
+void stopServers();
 
 /**** Fonctions pour le serveur TCP ****/
 int initialisationServeur(char *service, int connexions);
