@@ -27,9 +27,8 @@ void* lanceFunction(void *arg) {
 }
 
 
-/* Returns 0 on success, negative integer if not */
-int lanceThread(void (*func)(void *), void *arg, int size)
-{    
+/* Returns 0 on success, negative integer if failed */
+int lanceThread(void (*func)(void *), void *arg, int size) {    
     livingThreads++;
     Parameters *funcParameters;
     pthread_t tid;
@@ -40,7 +39,7 @@ int lanceThread(void (*func)(void *), void *arg, int size)
     argument = malloc(size);
     memcpy(argument, arg, (size_t)size);
     
-    funcParameters = (Parameters*)malloc(sizeof(Parameters));
+    funcParameters = (Parameters*) malloc(sizeof(Parameters));
     
     funcParameters->fonction = func;
     funcParameters->argument = argument;
