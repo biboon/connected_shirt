@@ -1,0 +1,22 @@
+#!/bin/sh
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+slattach -L -s 9600 -p slip /dev/ttyUSB0 -d &
+sleep 1
+ip address add dev sl0 172.26.79.214 peer 172.26.79.215
+echo 1 > /proc/sys/net/ipv4/ip_forward
+echo 1 > /proc/sys/net/ipv4/conf/all/proxy_arp
+ip route add 172.26.79.215/32 dev sl0
+socat UDP-LISTEN:12345,fork,so-bindtodevice=sl0 UDP-DATAGRAM:172.26.79.255:4000,broadcast &
+
+exit 0
+
