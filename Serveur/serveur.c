@@ -19,12 +19,12 @@ static bool _stop = false;
 struct sigaction action;
 
 void hand(int sig) {
-    if (sig == SIGINT || sig == SIGQUIT) {
-        printf("SIGINT/SIGQUIT signal received, closing servers...\n");
+    if (sig == SIGINT) {
+        printf("SIGINT signal received, closing servers...\n");
         stopServers();
         _stop = true;
     } else {
-        fprintf(stderr, "Unrecognized signal received, exiting\n");
+        perror("Unrecognized signal received, exiting");
         exit(EXIT_FAILURE);
     }
 }
@@ -96,7 +96,6 @@ int main(int argc,char *argv[]) {
     /* Signal handling initialization */
     action.sa_handler = hand;
     sigaction(SIGINT, &action, NULL);
-    sigaction(SIGQUIT, &action, NULL);
     
     /* Starting UDP messages server */
     lanceThread(startUDPServer, (void*) portUDP, sizeof(portUDP));
