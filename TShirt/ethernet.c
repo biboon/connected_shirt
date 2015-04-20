@@ -26,7 +26,7 @@ void build_packet (unsigned char* data, unsigned char* packet) {
     /* Calculating IP checksum */
     for (i = 0; i < 20; i += 2) {
         if (i != 10) {
-            cksm += ((packet[i] & 0xFF) << 8) + (packet[i + 1] & 0xFF);
+            cksm += (((uint32_t)packet[i] & 0xFF) << 8) + ((uint32_t)packet[i + 1] & 0xFF);
         }
         while (cksm > 0xFFFF) {
             cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
@@ -40,14 +40,14 @@ void build_packet (unsigned char* data, unsigned char* packet) {
     cksm = 0;
     for (i = 20; i < 33; i += 2) { /* UDP header */
         if (i != 26) {
-            cksm += (packet[i] & 0xFF)  << 8;
-            if (i != 32) cksm += packet[i + 1] & 0xFF;
+            cksm += ((uint32_t)packet[i] & 0xFF)  << 8;
+            if (i != 32) cksm += (uint32_t)packet[i + 1] & 0xFF;
         }
     }
     for (i = 12; i < 20; i += 2) { /* Src and dest addresses */
-        cksm += ((packet[i] & 0xFF) << 8) + (packet[i + 1] & 0xFF);
+        cksm += (((uint32_t)packet[i] & 0xFF) << 8) + ((uint32_t)packet[i + 1] & 0xFF);
     }
-    cksm += (packet[9] + packet [25]) & 0xFF; /* Protocol + UDP length */
+    cksm += ((uint32_t)packet[9] + (uint32_t)packet [25]) & 0xFF; /* Protocol + UDP length */
     while (cksm > 0x0000FFFF) {
         cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
     }
