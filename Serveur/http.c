@@ -25,28 +25,34 @@ void fillHtml(FILE* client, FILE* webpage)
 	char buffer[MAX_BUFFER];
 	int team = 0;
 	char request;
+	char byte;
+	int compt = 0;
 	
-	if(fgets(buffer,MAX_BUFFER,webpage)==NULL)
+	byte = fgetc(webpage);
+	while ((byte != '<') && !feof(webpage) && (compt < MAX_BUFFER))
 	{
-		fprintf(stderr, "Could not read the webpage\n");
-		return -1;
+	    buffer[compt] = byte;
+	    compt++;
+		byte = fgetc(webpage);
 	}
 	
 	if (sscanf(buffer, "team%d_%c", &team, &request) == 2)
 	{
 		/*if (request == n)
 			fprintf(client, UdpData[team-1].n);
-		else */ if (request == x)
-			fprintf(client, dataTab[team-1].x);
-		else if (request == y)
-			fprintf(client, dataTab[team-1].y);
-		else if (request == z)
-			fprintf(client, dataTab[team-1].z);
-		else if (request == t)
-			fprintf(client, dataTab[team-1].t);
+		else */ if (request == 'x')
+			fprintf(client,"%d", dataTab[team-1].x);
+		else if (request == 'y')
+			fprintf(client, "%d", dataTab[team-1].y);
+		else if (request == 'z')
+			fprintf(client, "%d", dataTab[team-1].z);
+		else if (request == 't')
+			fprintf(client, "%d", dataTab[team-1].t);
 	}
 	else
-		fprintf(stderr,"LELWTF\n");
+		fprintf(stderr,"error: %s\n", buffer);
+		
+		fputc(byte, client);
 }
 
 /** Main procedure **/
@@ -120,12 +126,10 @@ int createHttpClient(int socket)
 			while(!feof(webpage))
 			{
 				if (byte != '$')
-				{
 					fputc(byte, client);
-					byte = fgetc(webpage);
-				}
 				else
 					fillHtml(client, webpage);
+				byte = fgetc(webpage);
 			}
 		}
 	}
