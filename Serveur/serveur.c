@@ -24,10 +24,7 @@ void hand(int sig) {
         printf("SIGINT signal received, closing servers...\n");
         stopServers();
         _stop = true;
-    } else {
-        perror("Unrecognized signal received, exiting");
-        exit(EXIT_FAILURE);
-    }
+    } else perror("Unrecognized signal received");
 }
 
 void threadedTraitementUDP(void* arg) {
@@ -58,12 +55,7 @@ void threadedTraitementTCP (void* arg) {
     #ifdef DEBUG
         fprintf(stderr, "Started new TCP process thread on sock #%d\n", sock);
     #endif
-
-    createHttpClient(sock);    
-
-    #ifdef DEBUG
-        fprintf(stderr, "Closed TCP sock #%d\n", sock);
-    #endif
+    createHttpClient(sock);
 }
 
 void traitementTCP (int sock) {
