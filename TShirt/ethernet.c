@@ -17,7 +17,7 @@ const unsigned char skel_packet[33] = {
 /* builds the UDP/IP packet */
 void build_packet (unsigned char* data, unsigned char* packet) {
     int i = 0;
-    unsigned short int cksm = 0, to_add = 0, diff = 0;
+    uint32_t cksm = 0;
     
     /* Building base packet with constants and data*/
     for (i = 0; i < 29 + DATA_LENGTH; i++) packet[i] = skel_packet[i];
@@ -26,39 +26,32 @@ void build_packet (unsigned char* data, unsigned char* packet) {
     /* Calculating IP checksum */
     for (i = 0; i < 20; i += 2) {
         if (i != 10) {
-            to_add = ((packet[i] << 8) & 0xFF00) + (packet[i + 1] & 0xFF);
-            diff = 0xFFFF - cksm;
-            if (to_add > diff) cksm = to_add - diff;
-            else cksm += to_add;
+            cksm += ((packet[i] & 0xFF) << 8) + (packet[i + 1] & 0xFF);
+        }
+        while (cksm > 0xFFFF) {
+            cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
         }
     }
     cksm = ~cksm; /* Final one's complement */
-    /* Setting IP checksum in packet */
-    packet[10] = (cksm >> 4) & 0xFF;
+    packet[10] = (cksm & 0xFF00) >> 8; /* Setting IP checksum in packet */
     packet[11] = cksm & 0xFF;
     
     /* Calculating UDP checksum */
+    cksm = 0;
     for (i = 20; i < 33; i += 2) { /* UDP header */
         if (i != 26) {
-            to_add = ((packet[i] << 8) & 0xFF00);
-            if (i != 32) to_add += (packet[i + 1] & 0xFF);
-            diff = 0xFFFF - cksm;
-            if (to_add > diff) cksm = to_add - diff;
-            else cksm += to_add;
+            cksm += (packet[i] & 0xFF)  << 8;
+            if (i != 32) cksm += packet[i + 1] & 0xFF;
         }
     }
     for (i = 12; i < 20; i += 2) { /* Src and dest addresses */
-        to_add = ((packet[i] << 8) & 0xFF00) + (packet[i + 1] & 0xFF);
-        diff = 0xFFFF - cksm;
-        if (to_add > diff) cksm = to_add - diff;
-        else cksm += to_add;
+        cksm += ((packet[i] & 0xFF) << 8) + (packet[i + 1] & 0xFF);
     }
-    to_add = packet[9] + packet [25]; /* Protocol + UDP length */
-    diff = 0xFFFF - cksm;
-    if (to_add > diff) cksm = to_add - diff;
-    else cksm += to_add;
+    cksm += (packet[9] + packet [25]) & 0xFF; /* Protocol + UDP length */
+    while (cksm > 0x0000FFFF) {
+        cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
+    }
     cksm = ~cksm; /* Final one's complement */
-    /* Setting UDP checksum in packet */
-    packet[26] = (cksm >> 4) & 0xFF;
+    packet[26] = (cksm >> 8) & 0xFF; /* Setting UDP checksum in packet */
     packet[27] = cksm & 0xFF;
 }
