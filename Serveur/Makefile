@@ -1,6 +1,6 @@
 # Makefile pour generer le serveur 
 
-OBJS = serveur.o
+OBJS = serveur.o http.o
 LOCAL_LIBS  = -L ../Communication -L ../Threads
 LOCAL_LIBS += -lcom -lthrd
 CFLAGS     += -I ../Communication -I ../Threads -lpthread
@@ -10,10 +10,15 @@ all: serveur
 
 # La cible de nettoyage
 clean: 
-	rm -f core *.o serveur
+	rm -f core *.o serveur http
 
 # Les cibles pour l'executable
 serveur: $(OBJS)
 	$(CC) $(CFLAGS) -o serveur $(OBJS) $(LOCAL_LIBS) $(LIBS)
 
 serveur.o: serveur.c serveur.h
+
+http: $(OBJS)
+	$(CC) $(CFLAGS) -o http $(OBJS) $(LOCAL_LIBS) $(LIBS)
+
+http.o: http.c http.h

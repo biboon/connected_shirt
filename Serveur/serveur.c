@@ -13,6 +13,7 @@
 #include "libcom.h"
 #include "libthrd.h"
 #include "serveur.h"
+#include "http.h"
 
 /** Global variables **/
 static bool _stop = false;
@@ -57,11 +58,9 @@ void threadedTraitementTCP (void* arg) {
     #ifdef DEBUG
         fprintf(stderr, "Started new TCP process thread on sock #%d\n", sock);
     #endif
-    FILE* fd = fdopen(sock, "r");
-    if (fd == NULL) { perror("threadedTraitementTCP.fdopen"); exit(EXIT_FAILURE); }
-    fprintf(fd, "Hello World!\n");
-    sleep(10);
-    if (fclose(fd) < 0) { perror("threadedTraitementTCP.fclose"); exit(EXIT_FAILURE); }
+
+    createHttpClient(sock);    
+
     #ifdef DEBUG
         fprintf(stderr, "Closed TCP sock #%d\n", sock);
     #endif
