@@ -32,10 +32,7 @@ void threadedTraitementUDP(void* arg) {
     #ifdef DEBUG
         fprintf(stderr, "Started new UDP process thread, packet size: %d\n", param->size);
     #endif
-    sleep(10);
-    #ifdef DEBUG
-        fprintf(stderr, "Finished processing UDP packet\n");
-    #endif
+    fillDataTab(param->size, param->packet);
 }
 
 void traitementUDP(unsigned char* packet, int size) {

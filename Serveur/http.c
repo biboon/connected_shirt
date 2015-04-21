@@ -8,16 +8,24 @@
 
 #include "http.h"
 
-/** Some constants **/
-#define WEB_DIR  "./www"
-#define PAGE_NOTFOUND "error.html"
-#define MAX_BUFFER 1024
-
-#define CODE_OK  200
-#define CODE_NOTFOUND 404
-
-/* Main structure */
+/* Main data structure */
 UdpData dataTab[11];
+
+
+void fillDataTab(int size, unsigned char* packet) {
+    if (size == 5) {
+        int team = (int) ((packet[0] && 0xF0) >> 4);
+        dataTab[team].x = packet[1];
+        dataTab[team].y = packet[2];
+        dataTab[team].z = packet[3];
+        dataTab[team].t = packet[4];
+    } else {
+        fprintf(stderr, "Received packet with wrong size");
+    }
+    #ifdef DEBUG
+        fprintf(stderr, "Finished processing UDP packet\n");
+    #endif
+}
 
 
 void fillHtml(FILE* client, FILE* webpage) {
