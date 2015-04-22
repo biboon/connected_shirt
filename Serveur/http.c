@@ -5,11 +5,13 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include "http.h"
 
 /* Main data structure */
 UdpData dataTab[11];
+pthread_mutex_t dataMutex;
 
 char teamsName[11][25] = {"Jean & Flavien",
     "Cyril & JM",
@@ -25,16 +27,24 @@ char teamsName[11][25] = {"Jean & Flavien",
 };
 
 
+void initMutex() {
+    pthread_mutex_init(&dataMutex, NULL);
+    pthread_mutex_unlock(&dataMutex);
+}
+
+
 void fillDataTab(int size, unsigned char* packet) {
     if (size == 5) {
+        pthread_mutex_lock(&dataMutex);
         int team = (int) ((packet[0] & 0xF0) >> 4);
         dataTab[team].i = team;
         dataTab[team].x = packet[1];
         dataTab[team].y = packet[2];
         dataTab[team].z = packet[3];
         dataTab[team].t = packet[4];
+        pthread_mutex_unlock(&dataMutex);
     } else {
-        fprintf(stderr, "Received packet with wrong size");
+        fprintf(stderr, "Received packet with wrong size\n");
     }
     #ifdef DEBUG
         fprintf(stderr, "Finished processing UDP packet\n");
@@ -145,8 +155,7 @@ int createHttpClient(int socket)
             perror("createHttpClient.fopen webpage");
             return -1;
         }
-    } else
-        fprintf(stderr, "Command not valid");
+    } else fprintf(stderr, "Command not valid");
     
     #ifdef DEBUG
         printf("Http handling ended well, closing sock #%d\n", socket);
