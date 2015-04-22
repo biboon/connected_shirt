@@ -11,10 +11,24 @@
 /* Main data structure */
 UdpData dataTab[11];
 
+char teamsName[11][25] = {"Jean & Flavien",
+    "Cyril & JM",
+    "Kevin & Benjamin",
+    "Valentin & Alexander",
+    "Timothee & Mageshwaran",
+    "Jeremie & Julien",
+    "Mehdi & Thibault",
+    "Romain & Alexandre",
+    "Sandra & Elise",
+    "Hideo",
+    "Arnaud"
+};
+
 
 void fillDataTab(int size, unsigned char* packet) {
     if (size == 5) {
-        int team = (int) ((packet[0] && 0xF0) >> 4);
+        int team = (int) ((packet[0] & 0xF0) >> 4);
+        dataTab[team].i = team;
         dataTab[team].x = packet[1];
         dataTab[team].y = packet[2];
         dataTab[team].z = packet[3];
@@ -41,14 +55,19 @@ void fillHtml(FILE* client, FILE* webpage) {
     }
     
     if (sscanf(buffer, "team%d_%c", &team, &request) == 2) {
-        if (request == 'x')
-            fprintf(client,"%d", dataTab[team - 1].x);
+           if (request == 'n')
+            fprintf(client,"%s", teamsName[team]);
+        else if (request == 'x')
+            fprintf(client,"%d", dataTab[team].x);
         else if (request == 'y')
-            fprintf(client, "%d", dataTab[team - 1].y);
+            fprintf(client, "%d", dataTab[team].y);
         else if (request == 'z')
-            fprintf(client, "%d", dataTab[team - 1].z);
+            fprintf(client, "%d", dataTab[team].z);
         else if (request == 't')
-            fprintf(client, "%d", dataTab[team - 1].t);
+            fprintf(client, "%d", dataTab[team].t);
+        else if (request == 'i')
+            fprintf(client, "%d", dataTab[team].i);
+        fflush(client);
     } else
         fprintf(stderr, "fillHtml buffer error\n");
     fputc(byte, client); /* writes the < character */

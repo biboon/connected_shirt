@@ -15,6 +15,7 @@ typedef struct udpData {
 	unsigned char y;
 	unsigned char z;
 	unsigned char t;
+	unsigned char i;
 } UdpData;
 
 int createHttpClient(int socket);
