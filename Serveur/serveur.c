@@ -17,7 +17,7 @@
 
 /** Global variables **/
 static bool _stop = false;
-struct sigaction action;
+static struct sigaction action;
 
 void hand(int sig) {
     if (sig == SIGINT) {

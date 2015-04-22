@@ -6,6 +6,8 @@
 #define PAGE_NOTFOUND "error.html"
 #define MAX_BUFFER 1024
 
+#define NB_TEAMS 11
+
 #define CODE_OK  200
 #define CODE_NOTFOUND 404
 

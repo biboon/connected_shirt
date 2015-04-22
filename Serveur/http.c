@@ -10,10 +10,11 @@
 #include "http.h"
 
 /* Main data structure */
-UdpData dataTab[11];
-pthread_mutex_t dataMutex;
+static UdpData dataTab[NB_TEAMS];
+static pthread_mutex_t dataMutex[NB_TEAMS];
+static pthread_mutex_t webpageMutex;
 
-char teamsName[11][25] = {"Jean & Flavien",
+static char teamsName[NB_TEAMS][25] = {"Jean & Flavien",
     "Cyril & JM",
     "Kevin & Benjamin",
     "Valentin & Alexander",
@@ -28,21 +29,26 @@ char teamsName[11][25] = {"Jean & Flavien",
 
 
 void initMutex() {
-    pthread_mutex_init(&dataMutex, NULL);
-    pthread_mutex_unlock(&dataMutex);
+    int i;
+    for (i = 0; i < NB_TEAMS; i++) {
+        pthread_mutex_init((dataMutex + i), NULL);
+        pthread_mutex_unlock(dataMutex + i);
+    }
+        pthread_mutex_init(&webpageMutex, NULL);
+        pthread_mutex_unlock(&webpageMutex);
 }
 
 
 void fillDataTab(int size, unsigned char* packet) {
     if (size == 5) {
-        pthread_mutex_lock(&dataMutex);
         int team = (int) ((packet[0] & 0xF0) >> 4);
+        pthread_mutex_lock(dataMutex + team);
         dataTab[team].i = team;
         dataTab[team].x = packet[1];
         dataTab[team].y = packet[2];
         dataTab[team].z = packet[3];
         dataTab[team].t = packet[4];
-        pthread_mutex_unlock(&dataMutex);
+        pthread_mutex_unlock(dataMutex + team);
     } else {
         fprintf(stderr, "Received packet with wrong size\n");
     }
@@ -65,7 +71,8 @@ void fillHtml(FILE* client, FILE* webpage) {
     }
     
     if (sscanf(buffer, "team%d_%c", &team, &request) == 2) {
-           if (request == 'n')
+        pthread_mutex_lock(dataMutex + team);
+        if (request == 'n')
             fprintf(client,"%s", teamsName[team]);
         else if (request == 'x')
             fprintf(client,"%d", dataTab[team].x);
@@ -77,6 +84,7 @@ void fillHtml(FILE* client, FILE* webpage) {
             fprintf(client, "%d", dataTab[team].t);
         else if (request == 'i')
             fprintf(client, "%d", dataTab[team].i);
+        pthread_mutex_unlock(dataMutex + team);
         fflush(client);
     } else
         fprintf(stderr, "fillHtml buffer error\n");
@@ -142,6 +150,7 @@ int createHttpClient(int socket)
         fprintf(client, "\r\n");
         fflush(client);
         
+        pthread_mutex_lock(&webpageMutex);
         webpage = fopen(path, "r");
         if (webpage != NULL) {
             unsigned char byte;
@@ -151,6 +160,8 @@ int createHttpClient(int socket)
                 else fillHtml(client, webpage);
                 byte = fgetc(webpage);
             }
+            fclose(webpage);
+            pthread_mutex_unlock(&webpageMutex);
         } else {
             perror("createHttpClient.fopen webpage");
             return -1;

@@ -17,8 +17,4 @@ serveur: $(OBJS)
 	$(CC) $(CFLAGS) -o serveur $(OBJS) $(LOCAL_LIBS) $(LIBS)
 
 serveur.o: serveur.c serveur.h
-
-http: $(OBJS)
-	$(CC) $(CFLAGS) -o http $(OBJS) $(LOCAL_LIBS) $(LIBS)
-
 http.o: http.c http.h
