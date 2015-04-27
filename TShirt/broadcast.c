@@ -10,8 +10,8 @@
 #include "ethernet.h"
 
 
-int sqrt(int n) {
-    int res = n / 2, int i;
+int my_sqrt(int n) {
+    int res = n >> 1, i;
     for (i = 0; i < 6; i++) res = (res + n / res) / 2;
     return res;
 }
@@ -33,7 +33,7 @@ int main(void) {
             diff += (int)tmp * (int)tmp;
         }
         
-        angle = sqrt((int)input[0] * (int)input[0] + (int)input[2] * (int)input[2]) / (int)input[1];
+        angle = my_sqrt((int)input[0] * (int)input[0] + (int)input[2] * (int)input[2]) / (int)input[1];
         
         if (samples > 250) {
             samples = 0;

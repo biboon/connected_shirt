@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "http.h"
 
@@ -34,8 +35,8 @@ void initMutex() {
         pthread_mutex_init((dataMutex + i), NULL);
         pthread_mutex_unlock(dataMutex + i);
     }
-        pthread_mutex_init(&webpageMutex, NULL);
-        pthread_mutex_unlock(&webpageMutex);
+    pthread_mutex_init(&webpageMutex, NULL);
+    pthread_mutex_unlock(&webpageMutex);
 }
 
 
@@ -43,11 +44,19 @@ void fillDataTab(int size, unsigned char* packet) {
     if (size == 5) {
         int team = (int) ((packet[0] & 0xF0) >> 4);
         pthread_mutex_lock(dataMutex + team);
+        /* Putting data in structure */
         dataTab[team].i = team;
         dataTab[team].x = packet[1];
         dataTab[team].y = packet[2];
         dataTab[team].z = packet[3];
         dataTab[team].t = packet[4];
+        /* Saving data in binary file */
+        char filename[15];
+        sprintf(filename, "./www/binaries/save_%d.bin", team);
+        FILE* out = fopen(filename, "a");
+        fwrite((dataTab + team), sizeof(UdpData), 1, out);
+        fclose(out);
+        /* Finished */
         pthread_mutex_unlock(dataMutex + team);
     } else {
         fprintf(stderr, "Received packet with wrong size\n");
@@ -58,7 +67,7 @@ void fillDataTab(int size, unsigned char* packet) {
 }
 
 
-void fillHtml(FILE* client, FILE* webpage) {
+void fillValeurs(FILE* client, FILE* webpage) {
     char buffer[MAX_BUFFER];
     int team = 0, cpt = 0;
     char request, byte;
@@ -69,6 +78,7 @@ void fillHtml(FILE* client, FILE* webpage) {
         cpt++;
         byte = fgetc(webpage);
     }
+    buffer[cpt] = '\0';
     
     if (sscanf(buffer, "team%d_%c", &team, &request) == 2) {
         pthread_mutex_lock(dataMutex + team);
@@ -87,8 +97,49 @@ void fillHtml(FILE* client, FILE* webpage) {
         pthread_mutex_unlock(dataMutex + team);
         fflush(client);
     } else
-        fprintf(stderr, "fillHtml buffer error\n");
+        fprintf(stderr, "fillValeurs : Bad request\n");
     fputc(byte, client); /* writes the < character */
+}
+
+
+void fillGraphes(FILE* client, FILE* webpage) {
+    char buffer[MAX_BUFFER];
+    int team = 0, cpt = 0, dataCnt = 0, status = 0;
+    char byte;
+    char filename[15];
+    
+    byte = fgetc(webpage);
+    while ((byte != ']') && !feof(webpage) && (cpt < MAX_BUFFER)) {
+        buffer[cpt] = byte;
+        cpt++;
+        byte = fgetc(webpage);
+    }
+    buffer[cpt] = '\0';
+    
+    if (sscanf(buffer, "team_%d", &team) == 1) {
+        /* Reading data in binary file */
+        sprintf(filename, "./www/binaries/save_%d.bin", team);
+        pthread_mutex_lock(dataMutex + team);
+        FILE* in = fopen(filename, "r");
+        if (in != NULL) {
+            UdpData* tmp = (UdpData*) malloc(sizeof(UdpData));
+            if (tmp != NULL) {
+                status = fread(tmp, sizeof(UdpData), 1, in);
+                while (status == 0) {
+                    if (dataCnt > 0) fprintf(client, ",");
+                    fprintf(client, "{ y: '%d', a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
+                    status = fread(tmp, sizeof(UdpData), 1, in);
+                    dataCnt++;
+		        }
+		        free(tmp);
+                fflush(client);
+            } else perror("fillGraphes.malloc failed");
+            fclose(in);
+		}
+        pthread_mutex_unlock(dataMutex + team);
+    } else
+        fprintf(stderr, "fillGraphes : Bad request\n");
+    fputc(byte, client); /* writes the ] character */
 }
 
 
@@ -156,8 +207,10 @@ int createHttpClient(int socket)
             unsigned char byte;
             byte = fgetc(webpage);
             while (!feof(webpage)) {
-                if (byte != '$') fputc(byte, client);
-                else fillHtml(client, webpage);
+                if (byte == '$') {
+                    if (strcmp(page,"/valeurs.html") == 0) fillValeurs(client, webpage);
+                    else if (strcmp(page,"/graphes.html") == 0) fprintf(stderr, "tamer le fillgraphes\n"); //fillGraphes(client, webpage);
+                } else fputc(byte, client);
                 byte = fgetc(webpage);
             }
             fclose(webpage);

@@ -9,3 +9,4 @@ TShirt/*.a
 TShirt/*.o
 Threads/*.a
 Threads/*.o
+www/binaries/*.bin
