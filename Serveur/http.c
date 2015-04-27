@@ -53,7 +53,7 @@ void fillDataTab(int size, unsigned char* packet) {
         /* Saving data in binary file */
         char filename[30];
         sprintf(filename, "./www/binaries/team_%d.bin", team);
-        FILE* out = fopen(filename, "a");
+        FILE* out = fopen(filename, "ab");
         fwrite((dataTab + team), sizeof(UdpData), 1, out);
         fclose(out);
         /* Finished */
@@ -109,7 +109,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
     char filename[30];
     
     #ifdef DEBUG
-        printf("fillGraphes function started\n");
+        //fprintf(stderr, "fillGraphes function started\n");
     #endif
     
     byte = fgetc(webpage);
@@ -124,15 +124,15 @@ void fillGraphes(FILE* client, FILE* webpage) {
         /* Reading data in binary file */
         sprintf(filename, "./www/binaries/team_%d.bin", team);
         pthread_mutex_lock(dataMutex + team);
-        FILE* in = fopen(filename, "r");
+        FILE* in = fopen(filename, "rb");
         if (in != NULL) {
-            UdpData* tmp = (UdpData*) malloc(sizeof(UdpData));
+            UdpData *tmp = (UdpData*) malloc(sizeof(UdpData));
             if (tmp != NULL) {
                 status = fread(tmp, sizeof(UdpData), 1, in);
                 while (status == 1) {
-                    if (dataCnt > 0) fputc(' ', client);
-                    fprintf(client, "{ y: %d, a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
-                    fprintf(client, "\r\n");
+                    if (dataCnt > 0) fprintf(client, ",\r\n");
+                    //fprintf(client, "{ y: %d, a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
+                    fprintf(client, "vbntm");
                     fflush(client);
                     status = fread(tmp, sizeof(UdpData), 1, in);
                     dataCnt++;
@@ -172,21 +172,21 @@ int createHttpClient(int socket)
         return -1;
     }
     
-    if (fgets(buffer,MAX_BUFFER,client) == NULL) {
+    if (fgets(buffer, MAX_BUFFER, client) == NULL) {
         fprintf(stderr, "Client connected on socket %d did not send any data\n", socket);
         return -1;
     }
     
-    if (sscanf(buffer,"%s %s %s",cmd,page,proto) != 3) {
+    if (sscanf(buffer, "%s %s %s", cmd, page, proto) != 3) {
         fprintf(stderr, "Http request from client %d is not correctly formatted\n", socket);
         return -1;
     }
     
     while (fgets(buffer, MAX_BUFFER, client) != NULL)
         if (strcmp(buffer,"\r\n") == 0) break;
-    //client=stdout;
-    if (strcmp(cmd, "GET")==0) {
-        if (strcmp(page,"/") == 0)
+        
+    if (strcmp(cmd, "GET") == 0) {
+        if (strcmp(page, "/") == 0)
             sprintf(page, "/index.html");
         
         int code = CODE_OK;
