@@ -9,41 +9,44 @@
 #include "slip.h"
 #include "ethernet.h"
 
+
+int sqrt(int n) {
+    int res = n / 2, int i;
+    for (i = 0; i < 6; i++) res = (res + n / res) / 2;
+    return res;
+}
+
+
 int main(void) {
     /* Connection initialization */
     init_printf();
-    unsigned char input[DATA_LENGTH], absValue, tmp;
+    unsigned char input[DATA_LENGTH], old_input[DATA_LENGTH] = {123,123,123}, tmp;
     unsigned char packet[29 + DATA_LENGTH];
     
-    int i, samples = 0;
+    int i, samples = 0, angle, diff;
     while (1) {
-        absValue = 0;
-        for (i = 0; i < 3; i++) { /* getting x,y,z samples */
+        diff = 0;
+        for (i = 0; i < 3; i++) { /* Calculates squared distance of acceleration difference */
             ad_init(i);
-            tmp = ad_sample();
-            absValue += (tmp < 123) ? (123 - tmp) * (123 - tmp) : (tmp - 123) * (tmp - 123);
-            input[i] = tmp;
+            input[i] = ad_sample();
+            tmp = (input[i] < old_input[i]) ? (old_input[i] - input[i]) : (input[i] - old_input[i]);
+            diff += (int)tmp * (int)tmp;
         }
         
-        #if 0
-            No gravity means 123 value measure
-            ADXL335 : 300 mV/g
-            lilypad's adc : 12.9 mV/bit
-            1g = 24~25 bits (+123)
-        #endif
+        angle = sqrt((int)input[0] * (int)input[0] + (int)input[2] * (int)input[2]) / (int)input[1];
         
-        if (absValue > 1764 || input[2] > 142 || input[2] < 102) { /* fall if acc > 2g or horizontal, 1764 = 42*42 */
-            for (i = 0; i < 4; i++) input[i] = 0xFF;
-            build_packet(input, packet);
-            slip_send_packet(packet, 29 + DATA_LENGTH);
-        } else if (samples > 250) { /* sending sample every 5 seconds */
+        if (samples > 250) {
             samples = 0;
-            ad_init(3); /* getting temp */
             input[3] = ad_sample();
             build_packet(input, packet);
             slip_send_packet(packet, 29 + DATA_LENGTH);
+        } else if (diff > 500 && angle > 2) {
+            for (i = 0; i < 4; i++) input[i] = 0xFF;
+            build_packet(input, packet);
+            slip_send_packet(packet, 29 + DATA_LENGTH);
         }
         
+        for (i = 0; i < 3; i++) old_input[i] = input[i]; /* Saving old data */
         samples++; _delay_ms(20); /* getting 50 samples per second */
     }
 }
