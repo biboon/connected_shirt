@@ -125,17 +125,20 @@ void fillGraphes(FILE* client, FILE* webpage) {
             UdpData* tmp = (UdpData*) malloc(sizeof(UdpData));
             if (tmp != NULL) {
                 status = fread(tmp, sizeof(UdpData), 1, in);
-                while (status == 0) {
+                while (status == 1) {
                     if (dataCnt > 0) fprintf(client, ",");
-                    fprintf(client, "{ y: '%d', a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
+                    fprintf(client, "\n{ y: %d, a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
                     status = fread(tmp, sizeof(UdpData), 1, in);
                     dataCnt++;
-		        }
-		        free(tmp);
-                fflush(client);
+                }
+        printf("nik\n");
+                free(tmp);
+        printf("fdp\n");
+                //if (fflush(client) == 0) printf("noobfflush\n");
+        printf("wtf is this shit\n");
             } else perror("fillGraphes.malloc failed");
             fclose(in);
-		}
+        }
         pthread_mutex_unlock(dataMutex + team);
     } else
         fprintf(stderr, "fillGraphes : Bad request\n");
@@ -175,9 +178,9 @@ int createHttpClient(int socket)
         return -1;
     }
     
-    while (fgets(buffer,MAX_BUFFER,client) != NULL)
+    while (fgets(buffer, MAX_BUFFER, client) != NULL)
         if (strcmp(buffer,"\r\n") == 0) break;
-    
+    //client=stdout;
     if (strcmp(cmd, "GET")==0) {
         if (strcmp(page,"/") == 0)
             sprintf(page, "/index.html");
@@ -209,11 +212,13 @@ int createHttpClient(int socket)
             while (!feof(webpage)) {
                 if (byte == '$') {
                     if (strcmp(page,"/valeurs.html") == 0) fillValeurs(client, webpage);
-                    else if (strcmp(page,"/graphes.html") == 0) fprintf(stderr, "tamer le fillgraphes\n"); //fillGraphes(client, webpage);
+                    else if (strcmp(page,"/graphes.html") == 0) fillGraphes(client, webpage);
                 } else fputc(byte, client);
                 byte = fgetc(webpage);
             }
             fclose(webpage);
+            fprintf(client, "\r\n");
+            fflush(client);
             pthread_mutex_unlock(&webpageMutex);
         } else {
             perror("createHttpClient.fopen webpage");
