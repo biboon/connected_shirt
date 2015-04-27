@@ -51,8 +51,8 @@ void fillDataTab(int size, unsigned char* packet) {
         dataTab[team].z = packet[3];
         dataTab[team].t = packet[4];
         /* Saving data in binary file */
-        char filename[15];
-        sprintf(filename, "./www/binaries/save_%d.bin", team);
+        char filename[30];
+        sprintf(filename, "./www/binaries/team_%d.bin", team);
         FILE* out = fopen(filename, "a");
         fwrite((dataTab + team), sizeof(UdpData), 1, out);
         fclose(out);
@@ -106,7 +106,11 @@ void fillGraphes(FILE* client, FILE* webpage) {
     char buffer[MAX_BUFFER];
     int team = 0, cpt = 0, dataCnt = 0, status = 0;
     char byte;
-    char filename[15];
+    char filename[30];
+    
+    #ifdef DEBUG
+        printf("fillGraphes function started\n");
+    #endif
     
     byte = fgetc(webpage);
     while ((byte != ']') && !feof(webpage) && (cpt < MAX_BUFFER)) {
@@ -118,7 +122,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
     
     if (sscanf(buffer, "team_%d", &team) == 1) {
         /* Reading data in binary file */
-        sprintf(filename, "./www/binaries/save_%d.bin", team);
+        sprintf(filename, "./www/binaries/team_%d.bin", team);
         pthread_mutex_lock(dataMutex + team);
         FILE* in = fopen(filename, "r");
         if (in != NULL) {
@@ -126,22 +130,22 @@ void fillGraphes(FILE* client, FILE* webpage) {
             if (tmp != NULL) {
                 status = fread(tmp, sizeof(UdpData), 1, in);
                 while (status == 1) {
-                    if (dataCnt > 0) fprintf(client, ",");
-                    fprintf(client, "\n{ y: %d, a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
+                    if (dataCnt > 0) fputc(' ', client);
+                    fprintf(client, "{ y: %d, a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
+                    fprintf(client, "\r\n");
+                    fflush(client);
                     status = fread(tmp, sizeof(UdpData), 1, in);
                     dataCnt++;
                 }
-        printf("nik\n");
                 free(tmp);
-        printf("fdp\n");
-                //if (fflush(client) == 0) printf("noobfflush\n");
-        printf("wtf is this shit\n");
+                //fflush(client);
             } else perror("fillGraphes.malloc failed");
             fclose(in);
         }
         pthread_mutex_unlock(dataMutex + team);
     } else
         fprintf(stderr, "fillGraphes : Bad request\n");
+    
     fputc(byte, client); /* writes the ] character */
 }
 
