@@ -10,6 +10,8 @@
 
 #include "http.h"
 
+#define MAX_VALUES 100
+
 /* Main data structure */
 static UdpData dataTab[NB_TEAMS];
 static pthread_mutex_t dataMutex[NB_TEAMS];
@@ -107,10 +109,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
     int team = 0, cpt = 0, dataCnt = 0, status = 0;
     char byte;
     char filename[30];
-    
-    #ifdef DEBUG
-        //fprintf(stderr, "fillGraphes function started\n");
-    #endif
+    FILE* in = NULL;
     
     byte = fgetc(webpage);
     while ((byte != ']') && !feof(webpage) && (cpt < MAX_BUFFER)) {
@@ -124,22 +123,17 @@ void fillGraphes(FILE* client, FILE* webpage) {
         /* Reading data in binary file */
         sprintf(filename, "./www/binaries/team_%d.bin", team);
         pthread_mutex_lock(dataMutex + team);
-        FILE* in = fopen(filename, "rb");
+        in = fopen(filename, "rb");
         if (in != NULL) {
-            UdpData *tmp = (UdpData*) malloc(sizeof(UdpData));
-            if (tmp != NULL) {
-                status = fread(tmp, sizeof(UdpData), 1, in);
-                while (status == 1) {
-                    if (dataCnt > 0) fprintf(client, ",\r\n");
-                    //fprintf(client, "{ y: %d, a: %d, b: %d, c: %d, t: %d }", dataCnt, tmp->x, tmp->y, tmp->z, tmp->t);
-                    fprintf(client, "vbntm");
-                    fflush(client);
-                    status = fread(tmp, sizeof(UdpData), 1, in);
-                    dataCnt++;
-                }
-                free(tmp);
-                //fflush(client);
-            } else perror("fillGraphes.malloc failed");
+            UdpData tmp;
+            status = fread(&tmp, sizeof(UdpData), 1, in);
+            while (status == 1 && dataCnt < MAX_VALUES) {
+                if (dataCnt > 0) fputc(',', client);
+                fprintf(client, "{y:%d,a:%d,b:%d,c:%d,t:%d}", dataCnt, tmp.x, tmp.y, tmp.z, tmp.t);
+                fflush(client);
+                status = fread(&tmp, sizeof(UdpData), 1, in);
+                dataCnt++;
+            }
             fclose(in);
         }
         pthread_mutex_unlock(dataMutex + team);
@@ -151,8 +145,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
 
 
 /** Main procedure **/
-int createHttpClient(int socket)
-{
+int createHttpClient(int socket) {
     char buffer[MAX_BUFFER];
     char cmd[MAX_BUFFER];
     char page[MAX_BUFFER];
@@ -204,7 +197,7 @@ int createHttpClient(int socket)
         fprintf(client, "HTTP/1.0 %d\r\n", code);
         fprintf(client, "Server: CWeb\r\n");
         fprintf(client, "Content-type: %s\r\n", type);
-        fprintf(client, "Content-length: %d\r\n", (int)fstat.st_size);
+        fprintf(client, "Content-length: 20480\r\n");//, (int)fstat.st_size);
         fprintf(client, "\r\n");
         fflush(client);
         

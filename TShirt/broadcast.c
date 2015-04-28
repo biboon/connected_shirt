@@ -24,29 +24,43 @@ int main(void) {
     unsigned char packet[29 + DATA_LENGTH];
     
     int i, samples = 0, angle, diff;
+    #if 0
+    while (1) {
+        for (i = 0; i < 4; i++) {
+            ad_init(i);
+            input[i] = ad_sample();
+        }
+        build_packet(input, packet);
+        slip_send_packet(packet, 29 + DATA_LENGTH);
+        _delay_ms(1000);
+    }
+    #endif
+    
+    
     while (1) {
         diff = 0;
         for (i = 0; i < 3; i++) { /* Calculates squared distance of acceleration difference */
             ad_init(i);
             input[i] = ad_sample();
             tmp = (input[i] < old_input[i]) ? (old_input[i] - input[i]) : (input[i] - old_input[i]);
-            diff += (int)tmp * (int)tmp;
+            diff += (int)(tmp * tmp);
         }
         
-        angle = my_sqrt((int)input[0] * (int)input[0] + (int)input[2] * (int)input[2]) / (int)input[1];
+        angle = my_sqrt((int)(input[0] * input[0] + input[2] * input[2])) / (int)input[1];
         
-        if (samples > 250) {
+        if (samples > 20) {
             samples = 0;
             input[3] = ad_sample();
             build_packet(input, packet);
             slip_send_packet(packet, 29 + DATA_LENGTH);
-        } else if (diff > 500 && angle > 2) {
+        } else if (diff > 500 && angle > 1) {
             for (i = 0; i < 4; i++) input[i] = 0xFF;
             build_packet(input, packet);
             slip_send_packet(packet, 29 + DATA_LENGTH);
         }
         
         for (i = 0; i < 3; i++) old_input[i] = input[i]; /* Saving old data */
-        samples++; _delay_ms(20); /* getting 50 samples per second */
+        samples++; _delay_ms(50); /* getting 20 samples per second */
     }
+    
 }
