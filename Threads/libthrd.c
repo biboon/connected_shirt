@@ -8,6 +8,33 @@
 #include "libthrd.h"
 
 static int livingThreads = 0;
+static pthread_mutex_t dataMutex[NB_TEAMS];
+static pthread_mutex_t webpageMutex;
+
+
+void initMutexes() {
+    int i;
+    for (i = 0; i < NB_TEAMS; i++) {
+        pthread_mutex_init((dataMutex + i), NULL);
+        pthread_mutex_unlock(dataMutex + i);
+    }
+    pthread_mutex_init(&webpageMutex, NULL);
+    pthread_mutex_unlock(&webpageMutex);
+}
+
+void mutex_P(int index) {
+    if (index < NB_TEAMS)
+        pthread_mutex_lock(dataMutex + index);
+    else if (index == 20)
+        pthread_mutex_lock(&webpageMutex);
+}
+
+void mutex_V(int index) {
+    if (index < NB_TEAMS)
+        pthread_mutex_unlock(dataMutex + index);
+    else if (index == 20)
+        pthread_mutex_unlock(&webpageMutex);
+}
 
 void* lanceFunction(void *arg) {
     /* Copie de l'argument */

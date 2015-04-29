@@ -10,8 +10,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include "libcom.h"
-#include "libthrd.h"
+#include <libcom.h>
+#include <libthrd.h>l
 #include "serveur.h"
 #include "http.h"
 

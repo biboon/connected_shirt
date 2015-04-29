@@ -5,17 +5,20 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <pthread.h>
 #include <time.h>
 
 #include "http.h"
+#include <libcom.h>
+#include <libthrd.h>
 
-#define MAX_VALUES 100
+#define MAX_VALUES 60
+
+/* Mutexes indexes */
+#define WEBPAGE_MUTEX 20
+#define DATA_MUTEX 0
 
 /* Main data structure */
 static UdpData dataTab[NB_TEAMS];
-static pthread_mutex_t dataMutex[NB_TEAMS];
-static pthread_mutex_t webpageMutex;
 
 static char teamsName[NB_TEAMS][25] = {"Jean & Flavien",
     "Cyril & JM",
@@ -31,21 +34,12 @@ static char teamsName[NB_TEAMS][25] = {"Jean & Flavien",
 };
 
 
-void initMutex() {
-    int i;
-    for (i = 0; i < NB_TEAMS; i++) {
-        pthread_mutex_init((dataMutex + i), NULL);
-        pthread_mutex_unlock(dataMutex + i);
-    }
-    pthread_mutex_init(&webpageMutex, NULL);
-    pthread_mutex_unlock(&webpageMutex);
-}
-
+/** Functions **/
 
 void fillDataTab(int size, unsigned char* packet) {
     if (size == 5) {
         int team = (int) ((packet[0] & 0xF0) >> 4);
-        pthread_mutex_lock(dataMutex + team);
+        mutex_P(DATA_MUTEX + team);
         /* Putting data in structure */
         dataTab[team].i = team;
         dataTab[team].x = packet[1];
@@ -59,7 +53,7 @@ void fillDataTab(int size, unsigned char* packet) {
         fwrite((dataTab + team), sizeof(UdpData), 1, out);
         fclose(out);
         /* Finished */
-        pthread_mutex_unlock(dataMutex + team);
+        mutex_V(DATA_MUTEX + team);
     } else {
         fprintf(stderr, "Received packet with wrong size\n");
     }
@@ -83,7 +77,7 @@ void fillValeurs(FILE* client, FILE* webpage) {
     buffer[cpt] = '\0';
     
     if (sscanf(buffer, "team%d_%c", &team, &request) == 2) {
-        pthread_mutex_lock(dataMutex + team);
+        mutex_P(DATA_MUTEX + team);
         if (request == 'n')
             fprintf(client,"%s", teamsName[team]);
         else if (request == 'x')
@@ -96,7 +90,7 @@ void fillValeurs(FILE* client, FILE* webpage) {
             fprintf(client, "%d", dataTab[team].t);
         else if (request == 'i')
             fprintf(client, "%d", dataTab[team].i);
-        pthread_mutex_unlock(dataMutex + team);
+        mutex_V(DATA_MUTEX + team);
         fflush(client);
     } else
         fprintf(stderr, "fillValeurs : Bad request\n");
@@ -106,7 +100,7 @@ void fillValeurs(FILE* client, FILE* webpage) {
 
 void fillGraphes(FILE* client, FILE* webpage) {
     char buffer[MAX_BUFFER];
-    int team = 0, cpt = 0, dataCnt = 0, status = 0;
+    int team = 0, cpt = 0, dataCnt = 0, status = 0, nbValues = 0;
     char byte;
     char filename[30];
     FILE* in = NULL;
@@ -122,21 +116,37 @@ void fillGraphes(FILE* client, FILE* webpage) {
     if (sscanf(buffer, "team_%d", &team) == 1) {
         /* Reading data in binary file */
         sprintf(filename, "./www/binaries/team_%d.bin", team);
-        pthread_mutex_lock(dataMutex + team);
+        mutex_P(DATA_MUTEX + team);
         in = fopen(filename, "rb");
         if (in != NULL) {
+            /* Read the whole file to get number of values */
             UdpData tmp;
             status = fread(&tmp, sizeof(UdpData), 1, in);
-            while (status == 1 && dataCnt < MAX_VALUES) {
-                if (dataCnt > 0) fputc(',', client);
-                fprintf(client, "{y:%d,a:%d,b:%d,c:%d,t:%d}", dataCnt, tmp.x, tmp.y, tmp.z, tmp.t);
-                fflush(client);
+            while (status == 1) {
+                nbValues++;
                 status = fread(&tmp, sizeof(UdpData), 1, in);
-                dataCnt++;
+            }
+            #ifdef DEBUG
+                fprintf(stderr, "Successfully read %d objects from %s file\n", nbValues, filename);
+            #endif
+            
+            rewind(in);
+            status = fread(&tmp, sizeof(UdpData), 1, in);
+            int startIndex = (nbValues > MAX_VALUES) ? nbValues - MAX_VALUES : 0;
+            if (status == 1) {
+                while (status == 1) {
+                    if (dataCnt >= startIndex) {
+                        if (dataCnt > startIndex) fputc(',', client);
+                        fprintf(client, "{y:%d,a:%d,b:%d,c:%d,t:%d}", dataCnt, tmp.x, tmp.y, tmp.z, tmp.t);
+                        fflush(client);
+                    }
+                    status = fread(&tmp, sizeof(UdpData), 1, in);
+                    dataCnt++;
+                }
             }
             fclose(in);
         }
-        pthread_mutex_unlock(dataMutex + team);
+        mutex_V(DATA_MUTEX + team);
     } else
         fprintf(stderr, "fillGraphes : Bad request\n");
     
@@ -201,7 +211,7 @@ int createHttpClient(int socket) {
         fprintf(client, "\r\n");
         fflush(client);
         
-        pthread_mutex_lock(&webpageMutex);
+        mutex_P(WEBPAGE_MUTEX);
         webpage = fopen(path, "r");
         if (webpage != NULL) {
             unsigned char byte;
@@ -216,7 +226,7 @@ int createHttpClient(int socket) {
             fclose(webpage);
             fprintf(client, "\r\n");
             fflush(client);
-            pthread_mutex_unlock(&webpageMutex);
+            mutex_V(WEBPAGE_MUTEX);
         } else {
             perror("createHttpClient.fopen webpage");
             return -1;

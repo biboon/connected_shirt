@@ -20,8 +20,9 @@ typedef struct udpData {
 	unsigned char i;
 } UdpData;
 
-int createHttpClient(int socket);
-void fillHtml(FILE* client, FILE* webpage);
+void fillValeurs(FILE* client, FILE* webpage);
 void fillDataTab(int size, unsigned char* packet);
+void fillGraphes(FILE* client, FILE* webpage);
+int createHttpClient(int socket);
 
 #endif
