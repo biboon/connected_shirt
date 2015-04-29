@@ -48,7 +48,7 @@ int main(void) {
         
         angle = my_sqrt((int)(input[0] * input[0] + input[2] * input[2])) / (int)input[1];
         
-        if (samples > 20) {
+        if (samples > 150) { /* Sending data every second */
             samples = 0;
             input[3] = ad_sample();
             build_packet(input, packet);
@@ -60,7 +60,7 @@ int main(void) {
         }
         
         for (i = 0; i < 3; i++) old_input[i] = input[i]; /* Saving old data */
-        samples++; _delay_ms(50); /* getting 20 samples per second */
+        samples++; _delay_ms(19); /* getting 50 samples per second */
     }
     
 }
