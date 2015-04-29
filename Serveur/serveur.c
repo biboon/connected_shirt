@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 
 #include <libcom.h>
-#include <libthrd.h>l
+#include <libthrd.h>
 #include "serveur.h"
 #include "http.h"
 

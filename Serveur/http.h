@@ -18,6 +18,7 @@ typedef struct udpData {
 	unsigned char z;
 	unsigned char t;
 	unsigned char i;
+	long int ts;
 } UdpData;
 
 void fillValeurs(FILE* client, FILE* webpage);

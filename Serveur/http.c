@@ -46,6 +46,7 @@ void fillDataTab(int size, unsigned char* packet) {
         dataTab[team].y = packet[2];
         dataTab[team].z = packet[3];
         dataTab[team].t = packet[4];
+        dataTab[team].ts = (long int) time(NULL);
         /* Saving data in binary file */
         char filename[30];
         sprintf(filename, "./www/binaries/team_%d.bin", team);
@@ -133,16 +134,14 @@ void fillGraphes(FILE* client, FILE* webpage) {
             rewind(in);
             status = fread(&tmp, sizeof(UdpData), 1, in);
             int startIndex = (nbValues > MAX_VALUES) ? nbValues - MAX_VALUES : 0;
-            if (status == 1) {
-                while (status == 1) {
-                    if (dataCnt >= startIndex) {
-                        if (dataCnt > startIndex) fputc(',', client);
-                        fprintf(client, "{y:%d,a:%d,b:%d,c:%d,t:%d}", dataCnt, tmp.x, tmp.y, tmp.z, tmp.t);
-                        fflush(client);
-                    }
-                    status = fread(&tmp, sizeof(UdpData), 1, in);
-                    dataCnt++;
+            while (status == 1) {
+                if (dataCnt >= startIndex) {
+                    if (dataCnt > startIndex) fputc(',', client);
+                    fprintf(client, "{y:%ld,a:%d,b:%d,c:%d,t:%d}", tmp.ts, tmp.x, tmp.y, tmp.z, tmp.t);
+                    fflush(client);
                 }
+                status = fread(&tmp, sizeof(UdpData), 1, in);
+                dataCnt++;
             }
             fclose(in);
         }
