@@ -1,6 +1,6 @@
 # Makefile pour generer le serveur 
 
-OBJS = serveur.o http.o
+OBJS = serveur.o http.o tcp.o udp.o
 LIBS = -lpthread
 LOCAL_LIBS  = -L ../Communication -L ../Threads
 LOCAL_LIBS += -lcom -lthrd
@@ -19,3 +19,6 @@ serveur: $(OBJS)
 
 serveur.o: serveur.c serveur.h
 http.o: http.c http.h
+tcp.o: tcp.c tcp.h
+udp.o: udp.c udp.h
+

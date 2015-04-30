@@ -14,10 +14,13 @@
 #include <libthrd.h>
 #include "serveur.h"
 #include "http.h"
+#include "tcp.h"
+#include "udp.h"
 
 /** Global variables **/
 static bool _stop = false;
 static struct sigaction action;
+
 
 void hand(int sig) {
     if (sig == SIGINT) {
@@ -27,48 +30,6 @@ void hand(int sig) {
     } else perror("Unrecognized signal received");
 }
 
-void threadedTraitementUDP(void* arg) {
-    UDPParameters* param = arg;
-    #ifdef DEBUG
-        fprintf(stderr, "Started new UDP process thread, packet size: %d\n", param->size);
-    #endif
-    fillDataTab(param->size, param->packet);
-}
-
-void traitementUDP(unsigned char* packet, int size) {
-    int allocated = sizeof(UDPParameters) + size - 1;
-    UDPParameters *param = (UDPParameters*) malloc(allocated);
-    memcpy(param->packet, packet, size);
-    param->size = size;
-    printf("%d", param->size);
-    if (lanceThread(&threadedTraitementUDP, (void *) param, allocated) < 0) {
-        perror("traitementUDP.lanceThread"); exit(EXIT_FAILURE);
-    }
-    free(param);
-}
-
-void threadedTraitementTCP (void* arg) {
-    int sock = *((int *)arg);
-    #ifdef DEBUG
-        fprintf(stderr, "Started new TCP process thread on sock #%d\n", sock);
-    #endif
-    createHttpClient(sock);
-}
-
-void traitementTCP (int sock) {
-    int tmp = sock;
-    if (lanceThread(&threadedTraitementTCP, (void *) &tmp, sizeof(int)) < 0) {
-        perror("traitementTCP.lanceThread"); exit(EXIT_FAILURE);
-    }
-}
-
-void startTCPServer(void* arg) {
-    serveurTCP((char*)arg, &traitementTCP);
-}
-
-void startUDPServer(void* arg) {
-    serveurMessages((char*)arg, &traitementUDP);
-}
 
 int main(int argc,char *argv[]) {
     /* Analyzing options */

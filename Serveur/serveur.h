@@ -8,12 +8,6 @@ typedef struct udpParameters {
 } UDPParameters;
     
 /** Functions **/
-void threadedTraitementUDP(void* arg);
-void traitementUDP(unsigned char* packet, int size); /* Starts traitementUDP in a new thread */
-void threadedTraitementTCP (void* arg);
-void traitementTCP (int sock); /* Starts traitementTCP in a new thread */
-void startTCPServer(void* arg);
-void startUDPServer(void* arg);
 void hand(int sig);
 
 #endif

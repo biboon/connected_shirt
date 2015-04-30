@@ -137,7 +137,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
             while (status == 1) {
                 if (dataCnt >= startIndex) {
                     if (dataCnt > startIndex) fputc(',', client);
-                    fprintf(client, "{y:%ld,a:%d,b:%d,c:%d,t:%d}", tmp.ts, tmp.x, tmp.y, tmp.z, tmp.t);
+                    fprintf(client, "{y:%ld000,a:%d,b:%d,c:%d,t:%d}", tmp.ts, tmp.x, tmp.y, tmp.z, tmp.t);
                     fflush(client);
                 }
                 status = fread(&tmp, sizeof(UdpData), 1, in);
