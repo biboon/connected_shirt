@@ -11,11 +11,8 @@
 #include <libcom.h>
 #include <libthrd.h>
 
-#define MAX_VALUES 60
+#define MAX_VALUES 40
 
-/* Mutexes indexes */
-#define WEBPAGE_MUTEX 20
-#define DATA_MUTEX 0
 
 /* Main data structure */
 static UdpData dataTab[NB_TEAMS];
@@ -29,7 +26,7 @@ static char teamsName[NB_TEAMS][25] = {"Jean & Flavien",
     "Mehdi & Thibault",
     "Romain & Alexandre",
     "Sandra & Elise",
-    "Hideo",
+    "Hideo & Jerome",
     "Arnaud"
 };
 
@@ -39,22 +36,25 @@ static char teamsName[NB_TEAMS][25] = {"Jean & Flavien",
 void fillDataTab(int size, unsigned char* packet) {
     if (size == 5) {
         int team = (int) ((packet[0] & 0xF0) >> 4);
-        mutex_P(DATA_MUTEX + team);
         /* Putting data in structure */
+        P(DATA_MUTEX + team);
         dataTab[team].i = team;
         dataTab[team].x = packet[1];
         dataTab[team].y = packet[2];
         dataTab[team].z = packet[3];
         dataTab[team].t = packet[4];
         dataTab[team].ts = (long int) time(NULL);
+        V(DATA_MUTEX + team);
+        
         /* Saving data in binary file */
         char filename[30];
         sprintf(filename, "./www/binaries/team_%d.bin", team);
+        P(FILE_MUTEX + team);
         FILE* out = fopen(filename, "ab");
         fwrite((dataTab + team), sizeof(UdpData), 1, out);
         fclose(out);
+        V(FILE_MUTEX + team);
         /* Finished */
-        mutex_V(DATA_MUTEX + team);
     } else {
         fprintf(stderr, "Received packet with wrong size\n");
     }
@@ -78,7 +78,7 @@ void fillValeurs(FILE* client, FILE* webpage) {
     buffer[cpt] = '\0';
     
     if (sscanf(buffer, "team%d_%c", &team, &request) == 2) {
-        mutex_P(DATA_MUTEX + team);
+        P(DATA_MUTEX + team);
         if (request == 'n')
             fprintf(client,"%s", teamsName[team]);
         else if (request == 'x')
@@ -91,7 +91,7 @@ void fillValeurs(FILE* client, FILE* webpage) {
             fprintf(client, "%d", dataTab[team].t);
         else if (request == 'i')
             fprintf(client, "%d", dataTab[team].i);
-        mutex_V(DATA_MUTEX + team);
+        V(DATA_MUTEX + team);
         fflush(client);
     } else
         fprintf(stderr, "fillValeurs : Bad request\n");
@@ -117,7 +117,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
     if (sscanf(buffer, "team_%d", &team) == 1) {
         /* Reading data in binary file */
         sprintf(filename, "./www/binaries/team_%d.bin", team);
-        mutex_P(DATA_MUTEX + team);
+        P(FILE_MUTEX + team);
         in = fopen(filename, "rb");
         if (in != NULL) {
             /* Read the whole file to get number of values */
@@ -145,7 +145,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
             }
             fclose(in);
         }
-        mutex_V(DATA_MUTEX + team);
+        V(FILE_MUTEX + team);
     } else
         fprintf(stderr, "fillGraphes : Bad request\n");
     
@@ -210,7 +210,8 @@ int createHttpClient(int socket) {
         fprintf(client, "\r\n");
         fflush(client);
         
-        mutex_P(WEBPAGE_MUTEX);
+        if (strcmp(page,"/valeurs.html") == 0) P(VALEURS_MUTEX);
+        else if (strcmp(page,"/graphes.html") == 0) P(GRAPHES_MUTEX);
         webpage = fopen(path, "r");
         if (webpage != NULL) {
             unsigned char byte;
@@ -225,11 +226,12 @@ int createHttpClient(int socket) {
             fclose(webpage);
             fprintf(client, "\r\n");
             fflush(client);
-            mutex_V(WEBPAGE_MUTEX);
         } else {
             perror("createHttpClient.fopen webpage");
             return -1;
         }
+        if (strcmp(page,"/valeurs.html") == 0) V(VALEURS_MUTEX);
+        else if (strcmp(page,"/graphes.html") == 0) V(GRAPHES_MUTEX);
     } else fprintf(stderr, "Command not valid");
     
     #ifdef DEBUG

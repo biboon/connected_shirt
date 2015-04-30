@@ -7,36 +7,53 @@
 
 #include "libthrd.h"
 
-static int livingThreads = 0;
+int livingThreads = 0;
+
 static pthread_mutex_t dataMutex[NB_TEAMS];
-static pthread_mutex_t webpageMutex;
+static pthread_mutex_t filesMutex[NB_TEAMS];
+static pthread_mutex_t graphesMutex;
+static pthread_mutex_t valeursMutex;
+static pthread_mutex_t cptThreads;
 
 
 void initMutexes() {
     int i;
     for (i = 0; i < NB_TEAMS; i++) {
         pthread_mutex_init((dataMutex + i), NULL);
-        pthread_mutex_unlock(dataMutex + i);
+        pthread_mutex_init((filesMutex + i), NULL);
     }
-    pthread_mutex_init(&webpageMutex, NULL);
-    pthread_mutex_unlock(&webpageMutex);
+    pthread_mutex_init(&graphesMutex, NULL);
+    pthread_mutex_init(&valeursMutex, NULL);
+    pthread_mutex_init(&cptThreads, NULL);
 }
 
-void mutex_P(int index) {
-    if (index < NB_TEAMS)
+void P(int index) {
+    if (index >= DATA_MUTEX && index < DATA_MUTEX + NB_TEAMS)
         pthread_mutex_lock(dataMutex + index);
-    else if (index == 20)
-        pthread_mutex_lock(&webpageMutex);
+    else if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
+        pthread_mutex_lock(filesMutex + index);
+    else if (index == GRAPHES_MUTEX)
+        pthread_mutex_lock(&graphesMutex);
+    else if (index == VALEURS_MUTEX)
+        pthread_mutex_lock(&valeursMutex);
 }
 
-void mutex_V(int index) {
-    if (index < NB_TEAMS)
+void V(int index) {
+    if (index >= DATA_MUTEX && index < DATA_MUTEX + NB_TEAMS)
         pthread_mutex_unlock(dataMutex + index);
-    else if (index == 20)
-        pthread_mutex_unlock(&webpageMutex);
+    else if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
+        pthread_mutex_unlock(filesMutex + index);
+    else if (index == GRAPHES_MUTEX)
+        pthread_mutex_unlock(&graphesMutex);
+    else if (index == VALEURS_MUTEX)
+        pthread_mutex_unlock(&valeursMutex);
 }
 
 void* lanceFunction(void *arg) {
+    pthread_mutex_lock(&cptThreads);
+    livingThreads++;
+    pthread_mutex_unlock(&cptThreads);
+    
     /* Copie de l'argument */
     Parameters *funcParameters = arg;
     /* Appel de la fonction avec l'argument dans la structure */
@@ -45,7 +62,9 @@ void* lanceFunction(void *arg) {
     free(funcParameters->argument);
     free(funcParameters);
     
+    pthread_mutex_lock(&cptThreads);
     livingThreads--;
+    pthread_mutex_unlock(&cptThreads);
     #ifdef DEBUG
         fprintf(stderr, "Thread terminated, total remaining: %d\n", livingThreads);
     #endif
@@ -55,8 +74,11 @@ void* lanceFunction(void *arg) {
 
 
 /* Returns 0 on success, negative integer if failed */
-int lanceThread(void (*func)(void *), void *arg, int size) {    
-    livingThreads++;
+int lanceThread(void (*func)(void *), void *arg, int size) {
+    pthread_mutex_lock(&cptThreads);
+    if (livingThreads == MAX_THREADS) return -10;
+    pthread_mutex_unlock(&cptThreads);
+    
     Parameters *funcParameters;
     pthread_t tid;
     pthread_attr_t tattr;
@@ -82,5 +104,9 @@ int lanceThread(void (*func)(void *), void *arg, int size) {
 
 
 int getLivingThreads() {
-    return livingThreads;
+    int res;
+    pthread_mutex_lock(&cptThreads);
+    res = livingThreads;
+    pthread_mutex_unlock(&cptThreads);
+    return res;
 }

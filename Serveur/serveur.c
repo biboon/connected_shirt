@@ -54,7 +54,8 @@ int main(int argc,char *argv[]) {
     /* Main process sleeping while servers are working */
     while (!_stop) sleep(1);
     /* Waiting for threads to terminate */
-    while (getLivingThreads() != 0) sleep(1);
+    int tamer = 0;
+    while (getLivingThreads() != 0 && tamer < 10) { sleep(1); tamer++; }
     
     return 0;
 }

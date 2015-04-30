@@ -2,6 +2,13 @@
 #define __LIBTHRD_H__
 
 #define NB_TEAMS 11
+#define MAX_THREADS 100
+
+/* Mutexes indexes */
+#define DATA_MUTEX 0
+#define FILE_MUTEX 20
+#define GRAPHES_MUTEX 40
+#define VALEURS_MUTEX 41
 
 typedef struct parameters {
     void (*fonction)(void *);
@@ -14,8 +21,8 @@ int lanceThread(void (*threadTCP)(void *), void *arg, int val);
 int getLivingThreads();
 
 /* Mutexes */
-void mutex_P(int index);
-void mutex_V(int index);
+void P(int index);
+void V(int index);
 void initMutexes();
 
 #endif

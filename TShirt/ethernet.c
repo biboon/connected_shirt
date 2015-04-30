@@ -14,27 +14,36 @@ const unsigned char skel_packet[33] = {
     (TEAM_ID << 4) & 0xF0, 0, 0, 0, /* Datas */
     0};
 
+
 /* builds the UDP/IP packet */
 void build_packet (unsigned char* data, unsigned char* packet) {
+/* Building base packet with constants and data*/
+    unsigned int i;
+    for (i = 0; i < 29 + DATA_LENGTH; i++) packet[i] = skel_packet[i];
+    for (i = 0; i < DATA_LENGTH; i++) packet[29 + i] = data[i];
+    
+    do_ip_cksm(packet);
+    do_parity(packet);
+    do_udp_cksm(packet);
+}
+
+
+void do_parity (unsigned char* packet) {
+    unsigned int b = 1, cpt, i, j;
+    unsigned char data;
+    
+    for (j = 0; j < DATA_LENGTH; j++) {
+        cpt = 0;
+        data = packet[29 + j];
+        for (i = 0; i < 8; i++) if (data & (b << i)) cpt++;
+        packet[28] = packet[28] | ((unsigned char)(cpt + 1) % 2 << (DATA_LENGTH - j));
+    }
+}
+
+
+void do_udp_cksm (unsigned char* packet) {
     int i = 0;
     uint32_t cksm = 0;
-    
-    /* Building base packet with constants and data*/
-    for (i = 0; i < 29 + DATA_LENGTH; i++) packet[i] = skel_packet[i];
-    for (i = 0; i < DATA_LENGTH; i++) packet[i + 29] = data[i];
-    
-    /* Calculating IP checksum */
-    for (i = 0; i < 20; i += 2) {
-        if (i != 10) {
-            cksm += (((uint32_t)packet[i] & 0xFF) << 8) + ((uint32_t)packet[i + 1] & 0xFF);
-        }
-        while (cksm > 0xFFFF) {
-            cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
-        }
-    }
-    cksm = ~cksm; /* Final one's complement */
-    packet[10] = (cksm & 0xFF00) >> 8; /* Setting IP checksum in packet */
-    packet[11] = cksm & 0xFF;
     
     /* Calculating UDP checksum */
     cksm = 0;
@@ -54,4 +63,23 @@ void build_packet (unsigned char* data, unsigned char* packet) {
     cksm = ~cksm; /* Final one's complement */
     packet[26] = (cksm >> 8) & 0xFF; /* Setting UDP checksum in packet */
     packet[27] = cksm & 0xFF;
+}
+
+
+void do_ip_cksm (unsigned char* packet) {
+    int i = 0;
+    uint32_t cksm = 0;
+    
+    /* Calculating IP checksum */
+    for (i = 0; i < 20; i += 2) {
+        if (i != 10) {
+            cksm += (((uint32_t)packet[i] & 0xFF) << 8) + ((uint32_t)packet[i + 1] & 0xFF);
+        }
+        while (cksm > 0xFFFF) {
+            cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
+        }
+    }
+    cksm = ~cksm; /* Final one's complement */
+    packet[10] = (cksm & 0xFF00) >> 8; /* Setting IP checksum in packet */
+    packet[11] = cksm & 0xFF;
 }
