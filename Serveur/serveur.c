@@ -16,6 +16,8 @@
 #include "tcp.h"
 #include "udp.h"
 
+#define TIMEOUT 30
+
 /** Global variables **/
 static bool _stop = false;
 static struct sigaction action;
@@ -55,8 +57,8 @@ int main(int argc,char *argv[]) {
     
     /* Waiting for threads to terminate */
     int timeout = 0;
-    while (getLivingThreads() != 0 && timeout < 10) { sleep(1); timeout++; }
-    if (timeout == 10) printf("Servers quit: timeout\n");
+    while (getLivingThreads() != 0 && timeout < TIMEOUT) { sleep(1); timeout++; }
+    if (timeout == TIMEOUT) printf("Servers quit: timeout\n");
     
     return 0;
 }
