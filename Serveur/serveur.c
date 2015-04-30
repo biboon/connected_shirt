@@ -47,6 +47,9 @@ int main(int argc,char *argv[]) {
     action.sa_handler = hand;
     sigaction(SIGINT, &action, NULL);
     
+    /* Mutexes initialization */
+    initMutexes();
+    
     /* Starting UDP messages server */
     lanceThread(startUDPServer, (void*) portUDP, sizeof(portUDP));
     /* Starting TCP server */

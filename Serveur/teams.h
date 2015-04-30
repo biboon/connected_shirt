@@ -1,5 +1,5 @@
-#ifndef __DATA_H__
-#define __DATA_H__
+#ifndef __TEAMS_H__
+#define __TEAMS_H__
 
 #define NB_TEAMS 11
 
