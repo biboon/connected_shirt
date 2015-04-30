@@ -7,30 +7,24 @@
 
 #include "libthrd.h"
 
-int livingThreads = 0;
+static int livingThreads = 0;
 
-static pthread_mutex_t dataMutex[NB_TEAMS];
 static pthread_mutex_t filesMutex[NB_TEAMS];
 static pthread_mutex_t graphesMutex;
 static pthread_mutex_t valeursMutex;
-static pthread_mutex_t cptThreads;
 
 
 void initMutexes() {
     int i;
     for (i = 0; i < NB_TEAMS; i++) {
-        pthread_mutex_init((dataMutex + i), NULL);
         pthread_mutex_init((filesMutex + i), NULL);
     }
     pthread_mutex_init(&graphesMutex, NULL);
     pthread_mutex_init(&valeursMutex, NULL);
-    pthread_mutex_init(&cptThreads, NULL);
 }
 
 void P(int index) {
-    if (index >= DATA_MUTEX && index < DATA_MUTEX + NB_TEAMS)
-        pthread_mutex_lock(dataMutex + index);
-    else if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
+    if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
         pthread_mutex_lock(filesMutex + index);
     else if (index == GRAPHES_MUTEX)
         pthread_mutex_lock(&graphesMutex);
@@ -39,9 +33,7 @@ void P(int index) {
 }
 
 void V(int index) {
-    if (index >= DATA_MUTEX && index < DATA_MUTEX + NB_TEAMS)
-        pthread_mutex_unlock(dataMutex + index);
-    else if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
+    if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
         pthread_mutex_unlock(filesMutex + index);
     else if (index == GRAPHES_MUTEX)
         pthread_mutex_unlock(&graphesMutex);
@@ -50,10 +42,6 @@ void V(int index) {
 }
 
 void* lanceFunction(void *arg) {
-    pthread_mutex_lock(&cptThreads);
-    livingThreads++;
-    pthread_mutex_unlock(&cptThreads);
-    
     /* Copie de l'argument */
     Parameters *funcParameters = arg;
     /* Appel de la fonction avec l'argument dans la structure */
@@ -62,9 +50,7 @@ void* lanceFunction(void *arg) {
     free(funcParameters->argument);
     free(funcParameters);
     
-    pthread_mutex_lock(&cptThreads);
     livingThreads--;
-    pthread_mutex_unlock(&cptThreads);
     #ifdef DEBUG
         fprintf(stderr, "Thread terminated, total remaining: %d\n", livingThreads);
     #endif
@@ -75,38 +61,49 @@ void* lanceFunction(void *arg) {
 
 /* Returns 0 on success, negative integer if failed */
 int lanceThread(void (*func)(void *), void *arg, int size) {
-    pthread_mutex_lock(&cptThreads);
-    if (livingThreads == MAX_THREADS) return -10;
-    pthread_mutex_unlock(&cptThreads);
+    if (livingThreads == MAX_THREADS) {
+        #ifdef DEBUG
+            perror("lanceThread.thread_limit");
+        #endif
+        return -5;
+    }
     
-    Parameters *funcParameters;
-    pthread_t tid;
-    pthread_attr_t tattr;
-    int ret = 0;
-    void *argument;
-    
-    argument = malloc(size);
-    memcpy(argument, arg, (size_t)size);
-    
-    funcParameters = (Parameters*) malloc(sizeof(Parameters));
-    
+    Parameters* funcParameters = (Parameters*) malloc(sizeof(Parameters));
+    if (funcParameters == NULL) {
+        #ifdef DEBUG
+            perror("lanceThread.funcParameters.malloc");
+        #endif
+        return -1;
+    }
     funcParameters->fonction = func;
-    funcParameters->argument = argument;
+    funcParameters->argument = malloc(size);
+    if (funcParameters->argument == NULL) {
+        #ifdef DEBUG
+            perror("lanceThread.funcParameters.argument.malloc");
+        #endif
+        return -2;
+    }
+    memcpy(funcParameters->argument, arg, (size_t)size);
     
-    ret = pthread_attr_init(&tattr);
-    ret += pthread_attr_setdetachstate(&tattr,PTHREAD_CREATE_DETACHED);
-    ret += pthread_create(&tid, &tattr, lanceFunction, funcParameters);
+    pthread_attr_t attr;
+    pthread_t tid;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if (pthread_create(&tid, &attr, lanceFunction, funcParameters) != 0) {
+        #ifdef DEBUG
+            perror("lanceThread.pthread_create");
+        #endif
+        return -3;
+    }
+    
+    livingThreads++;
     #ifdef DEBUG
         fprintf(stderr, "Thread started, total running: %d\n", livingThreads);
     #endif
-    return ret;
+    return 0;
 }
 
 
 int getLivingThreads() {
-    int res;
-    pthread_mutex_lock(&cptThreads);
-    res = livingThreads;
-    pthread_mutex_unlock(&cptThreads);
-    return res;
+    return livingThreads;
 }

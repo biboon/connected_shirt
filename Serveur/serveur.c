@@ -12,7 +12,6 @@
 
 #include <libcom.h>
 #include <libthrd.h>
-#include "serveur.h"
 #include "http.h"
 #include "tcp.h"
 #include "udp.h"
@@ -53,9 +52,11 @@ int main(int argc,char *argv[]) {
     
     /* Main process sleeping while servers are working */
     while (!_stop) sleep(1);
+    
     /* Waiting for threads to terminate */
-    int tamer = 0;
-    while (getLivingThreads() != 0 && tamer < 10) { sleep(1); tamer++; }
+    int timeout = 0;
+    while (getLivingThreads() != 0 && timeout < 10) { sleep(1); timeout++; }
+    if (timeout == 10) printf("Servers quit: timeout\n");
     
     return 0;
 }

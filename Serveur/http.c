@@ -8,66 +8,18 @@
 #include <time.h>
 
 #include "http.h"
+#include "teams.h"
 #include <libcom.h>
 #include <libthrd.h>
 
 #define MAX_VALUES 40
 
 
-/* Main data structure */
-static UdpData dataTab[NB_TEAMS];
-
-static char teamsName[NB_TEAMS][25] = {"Jean & Flavien",
-    "Cyril & JM",
-    "Kevin & Benjamin",
-    "Valentin & Alexander",
-    "Timothee & Mageshwaran",
-    "Jeremie & Julien",
-    "Mehdi & Thibault",
-    "Romain & Alexandre",
-    "Sandra & Elise",
-    "Hideo & Jerome",
-    "Arnaud"
-};
-
-
 /** Functions **/
-
-void fillDataTab(int size, unsigned char* packet) {
-    if (size == 5) {
-        int team = (int) ((packet[0] & 0xF0) >> 4);
-        /* Putting data in structure */
-        P(DATA_MUTEX + team);
-        dataTab[team].i = team;
-        dataTab[team].x = packet[1];
-        dataTab[team].y = packet[2];
-        dataTab[team].z = packet[3];
-        dataTab[team].t = packet[4];
-        dataTab[team].ts = (long int) time(NULL);
-        V(DATA_MUTEX + team);
-        
-        /* Saving data in binary file */
-        char filename[30];
-        sprintf(filename, "./www/binaries/team_%d.bin", team);
-        P(FILE_MUTEX + team);
-        FILE* out = fopen(filename, "ab");
-        fwrite((dataTab + team), sizeof(UdpData), 1, out);
-        fclose(out);
-        V(FILE_MUTEX + team);
-        /* Finished */
-    } else {
-        fprintf(stderr, "Received packet with wrong size\n");
-    }
-    #ifdef DEBUG
-        fprintf(stderr, "Finished processing UDP packet\n");
-    #endif
-}
-
-
 void fillValeurs(FILE* client, FILE* webpage) {
-    char buffer[MAX_BUFFER];
-    int team = 0, cpt = 0;
-    char request, byte;
+    char buffer[MAX_BUFFER], filename[30], byte;
+    int team = 0, cpt = 0, status;
+    FILE* in = NULL;
     
     byte = fgetc(webpage);
     while ((byte != '<') && !feof(webpage) && (cpt < MAX_BUFFER)) {
@@ -77,33 +29,36 @@ void fillValeurs(FILE* client, FILE* webpage) {
     }
     buffer[cpt] = '\0';
     
-    if (sscanf(buffer, "team%d_%c", &team, &request) == 2) {
-        P(DATA_MUTEX + team);
-        if (request == 'n')
-            fprintf(client,"%s", teamsName[team]);
-        else if (request == 'x')
-            fprintf(client,"%d", dataTab[team].x);
-        else if (request == 'y')
-            fprintf(client, "%d", dataTab[team].y);
-        else if (request == 'z')
-            fprintf(client, "%d", dataTab[team].z);
-        else if (request == 't')
-            fprintf(client, "%d", dataTab[team].t);
-        else if (request == 'i')
-            fprintf(client, "%d", dataTab[team].i);
-        V(DATA_MUTEX + team);
-        fflush(client);
-    } else
-        fprintf(stderr, "fillValeurs : Bad request\n");
+    if (sscanf(buffer, "team_%d", &team) == 1) {
+        /* Getting last data saved in binary file */
+        sprintf(filename, "./www/binaries/team_%d.bin", team);
+        P(FILE_MUTEX + team);
+        in = fopen(filename, "rb");
+        if (in != NULL) {
+            Message* data = (Message*) malloc (sizeof(Message));
+            Message* read = (Message*) malloc (sizeof(Message));
+            status = fread(read, sizeof(Message), 1, in);
+            while (status == 1) {
+                memcpy(data, read, sizeof(Message));
+                status = fread(read, sizeof(Message), 1, in);
+            }
+            free(read);
+            fclose(in);
+            
+            /* Writing data to client */
+            fprintf(client, "<td class=\"name\">%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td>", getTeamName(team), data->i, data->x, data->y, data->z, data->t);
+            fflush(client);
+            free(data);
+        } else fprintf(stderr, "fillValeurs: Unable to open file %s\n", filename);
+        V(FILE_MUTEX + team);
+    } else fprintf(stderr, "fillValeurs: Bad request\n");
     fputc(byte, client); /* writes the < character */
 }
 
 
 void fillGraphes(FILE* client, FILE* webpage) {
-    char buffer[MAX_BUFFER];
-    int team = 0, cpt = 0, dataCnt = 0, status = 0, nbValues = 0;
-    char byte;
-    char filename[30];
+    char buffer[MAX_BUFFER], filename[30], byte;
+    int team = 0, cpt = 0, dataCnt = 0, status = 0, nbValues = 0, startIndex;
     FILE* in = NULL;
     
     byte = fgetc(webpage);
@@ -115,39 +70,39 @@ void fillGraphes(FILE* client, FILE* webpage) {
     buffer[cpt] = '\0';
     
     if (sscanf(buffer, "team_%d", &team) == 1) {
-        /* Reading data in binary file */
+        /* Getting data saved in binary file */
         sprintf(filename, "./www/binaries/team_%d.bin", team);
         P(FILE_MUTEX + team);
         in = fopen(filename, "rb");
         if (in != NULL) {
             /* Read the whole file to get number of values */
-            UdpData tmp;
-            status = fread(&tmp, sizeof(UdpData), 1, in);
+            Message* data = (Message*) malloc(sizeof(Message));
+            status = fread(data, sizeof(Message), 1, in);
             while (status == 1) {
                 nbValues++;
-                status = fread(&tmp, sizeof(UdpData), 1, in);
+                status = fread(data, sizeof(Message), 1, in);
             }
             #ifdef DEBUG
                 fprintf(stderr, "Successfully read %d objects from %s file\n", nbValues, filename);
             #endif
             
+            /* Read the file again and write asked data */
             rewind(in);
-            status = fread(&tmp, sizeof(UdpData), 1, in);
-            int startIndex = (nbValues > MAX_VALUES) ? nbValues - MAX_VALUES : 0;
+            status = fread(data, sizeof(Message), 1, in);
+            startIndex = (nbValues > MAX_VALUES) ? nbValues - MAX_VALUES : 0;
             while (status == 1) {
                 if (dataCnt >= startIndex) {
                     if (dataCnt > startIndex) fputc(',', client);
-                    fprintf(client, "{y:%ld000,a:%d,b:%d,c:%d,t:%d}", tmp.ts, tmp.x, tmp.y, tmp.z, tmp.t);
+                    fprintf(client, "{y:%ld000,a:%d,b:%d,c:%d,t:%d}", data->ts, data->x, data->y, data->z, data->t);
                     fflush(client);
                 }
-                status = fread(&tmp, sizeof(UdpData), 1, in);
+                status = fread(data, sizeof(Message), 1, in);
                 dataCnt++;
             }
             fclose(in);
-        }
+        } else fprintf(stderr, "fillGraphes: Unable to open file %s\n", filename);
         V(FILE_MUTEX + team);
-    } else
-        fprintf(stderr, "fillGraphes : Bad request\n");
+    } else fprintf(stderr, "fillGraphes: Bad request\n");
     
     fputc(byte, client); /* writes the ] character */
 }
@@ -206,7 +161,7 @@ int createHttpClient(int socket) {
         fprintf(client, "HTTP/1.0 %d\r\n", code);
         fprintf(client, "Server: CWeb\r\n");
         fprintf(client, "Content-type: %s\r\n", type);
-        fprintf(client, "Content-length: 20480\r\n");//, (int)fstat.st_size);
+        fprintf(client, "Content-length: 30000\r\n");//, (int)fstat.st_size);
         fprintf(client, "\r\n");
         fflush(client);
         

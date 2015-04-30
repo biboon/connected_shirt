@@ -4,7 +4,6 @@
 #include <libthrd.h>
 #include <libcom.h>
 #include "tcp.h"
-#include "serveur.h"
 #include "http.h"
 
 void threadedTraitementTCP (void* arg) {

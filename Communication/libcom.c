@@ -109,6 +109,7 @@ int boucleServeurUDP(int s, void (*traitement)(unsigned char *, int)) {
         #endif
         int nboctets = recvfrom(s, packet, UDP_BUFSIZE, 0, (struct sockaddr *)&adresse, &taille);
         if (nboctets < 0) { perror("boucleServeurUDP.recvfrom"); exit(EXIT_FAILURE); }
+        packet[nboctets] = '\0';
         traitement(packet, nboctets);
     }
     #ifdef DEBUG
@@ -163,14 +164,14 @@ int initialisationServeur(char *service, int connexions) {
     
     /* Socket address specification */
     status = bind(s, resultat->ai_addr, resultat->ai_addrlen);
-    if (status < 0) exit(EXIT_FAILURE);
+    if (status < 0) { perror("initialisationServeur.bind"); exit(EXIT_FAILURE); }
     
     /* Freeing informations structure */
     freeaddrinfo(resultat);
     
     /* Size of waiting queue */
     status = listen(s, connexions);
-    if (status < 0) exit(EXIT_FAILURE);
+    if (status < 0) { perror("initialisationServeur.listen"); exit(EXIT_FAILURE); }
     #ifdef DEBUG
         fprintf(stderr, "TCP socket successfully created on sock #%d\n", s);
     #endif
@@ -186,8 +187,8 @@ int boucleServeur(int ecoute, void (*traitement)(int)) {
     int new_fd = -1;
     while (!_stop) {
         new_fd = accept(ecoute, NULL, NULL);
-        if (new_fd < 0) { perror("boucleServeur.accept"); exit(EXIT_FAILURE); }
-        else traitement(new_fd);
+        if (new_fd >= 0) traitement(new_fd);
+        else { perror("boucleServeur.accept"); exit(EXIT_FAILURE); }
     }
     #ifdef DEBUG
         fprintf(stderr, "Closed TCP server\n");

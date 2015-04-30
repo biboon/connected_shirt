@@ -5,7 +5,6 @@
 #define MAX_THREADS 100
 
 /* Mutexes indexes */
-#define DATA_MUTEX 0
 #define FILE_MUTEX 20
 #define GRAPHES_MUTEX 40
 #define VALEURS_MUTEX 41
