@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "ethernet.h"
 
@@ -21,22 +22,23 @@ void build_packet (unsigned char* data, unsigned char* packet) {
     unsigned int i;
     for (i = 0; i < 29 + DATA_LENGTH; i++) packet[i] = skel_packet[i];
     for (i = 0; i < DATA_LENGTH; i++) packet[29 + i] = data[i];
-    
-    do_ip_cksm(packet);
+
     do_parity(packet);
     do_udp_cksm(packet);
+    do_ip_cksm(packet);
 }
 
 
 void do_parity (unsigned char* packet) {
-    unsigned int b = 1, cpt, i, j;
-    unsigned char data;
-    
+    unsigned int i, j;
+    unsigned char data, b = 1;
+    bool res;
+
     for (j = 0; j < DATA_LENGTH; j++) {
-        cpt = 0;
+        res = false;
         data = packet[29 + j];
-        for (i = 0; i < 8; i++) if (data & (b << i)) cpt++;
-        packet[28] = packet[28] | ((unsigned char)(cpt + 1) % 2 << (DATA_LENGTH - j));
+        for (i = 0; i < 8; i++) if (data & (b << i)) res = !res;
+        if (!res) packet[28] = packet[28] | (b << j);
     }
 }
 
@@ -44,7 +46,7 @@ void do_parity (unsigned char* packet) {
 void do_udp_cksm (unsigned char* packet) {
     int i = 0;
     uint32_t cksm = 0;
-    
+
     /* Calculating UDP checksum */
     cksm = 0;
     for (i = 20; i < 33; i += 2) { /* UDP header */
@@ -58,7 +60,7 @@ void do_udp_cksm (unsigned char* packet) {
     }
     cksm += ((uint32_t)packet[9] + (uint32_t)packet [25]) & 0xFF; /* Protocol + UDP length */
     while (cksm > 0x0000FFFF) {
-        cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
+        cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16);
     }
     cksm = ~cksm; /* Final one's complement */
     packet[26] = (cksm >> 8) & 0xFF; /* Setting UDP checksum in packet */
@@ -69,14 +71,14 @@ void do_udp_cksm (unsigned char* packet) {
 void do_ip_cksm (unsigned char* packet) {
     int i = 0;
     uint32_t cksm = 0;
-    
+
     /* Calculating IP checksum */
     for (i = 0; i < 20; i += 2) {
         if (i != 10) {
             cksm += (((uint32_t)packet[i] & 0xFF) << 8) + ((uint32_t)packet[i + 1] & 0xFF);
         }
         while (cksm > 0xFFFF) {
-            cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16); 
+            cksm = (cksm & 0x0000FFFF) + ((cksm & 0xFFFF0000) >> 16);
         }
     }
     cksm = ~cksm; /* Final one's complement */
