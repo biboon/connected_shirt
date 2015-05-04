@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include "udp.h"
 
@@ -11,8 +12,24 @@
 #include <libthrd.h>
 
 
+bool check_parity(unsigned char* packet) {
+  int i = 1, j;
+  bool res = true;
+  unsigned char data, b = 1, tmp, out = 0;
+  do {
+    data = packet[i];
+    tmp = 1;
+    for (j = 0; j < 8; j++) if (data & (b << j)) tmp++;
+    tmp = tmp % 2;
+    res &= ((packet[0] >> (4 - i)) & 0x01) == tmp;
+    i++;
+  } while (res && i < 5);
+  return res;
+}
+
+
 void saveData(unsigned char* packet, int size) {
-    if (size == 5) {
+    if (size == 5 && check_parity(packet)) {
         int team = (int) ((packet[0] & 0xF0) >> 4);
         Message* data = (Message*) malloc(sizeof(Message));
         /* Putting data in structure */
@@ -22,7 +39,7 @@ void saveData(unsigned char* packet, int size) {
         data->z = packet[3];
         data->t = packet[4];
         data->ts = (long int) time(NULL);
-        
+
         /* Saving data in binary file */
         char filename[30];
         sprintf(filename, "./www/binaries/team_%d.bin", team);
@@ -34,7 +51,7 @@ void saveData(unsigned char* packet, int size) {
         free(data);
         /* Finished */
     } else {
-        fprintf(stderr, "Received packet with wrong size\n");
+        fprintf(stderr, "Received packet with wrong size or parity is wrong\n");
     }
     #ifdef DEBUG
         fprintf(stderr, "Finished processing UDP packet\n");

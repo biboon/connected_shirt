@@ -7,6 +7,7 @@ typedef struct udpParameters {
     unsigned char packet[1];
 } UDPParameters;
 
+bool check_parity(unsigned char* packet);
 void threadedTraitementUDP(void* arg);
 void traitementUDP(unsigned char* packet, int size);
 void startUDPServer(void* arg);
