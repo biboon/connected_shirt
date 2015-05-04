@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdio.h>
 
@@ -20,6 +21,7 @@ void task_send_samples(void) {
 
 	int i, samples = 0, angle, diff;
 	while (1) {
+		cli();
 		diff = 0;
 		for (i = 0; i < 3; i++) { /* Calculates squared distance of acceleration difference */
 			ad_init(i);
@@ -30,7 +32,7 @@ void task_send_samples(void) {
 
 		angle = my_sqrt(((int)input[0] * (int)input[0] + (int)input[2] * (int)input[2])) / (int)input[1];
 
-		if (samples > 150) { /* Sending data every second */
+		if (samples > 40) { /* Sending data every 3 second */
 			samples = 0;
 			ad_init(3);
 			input[3] = ad_sample();
@@ -43,16 +45,21 @@ void task_send_samples(void) {
 		}
 
 		for (i = 0; i < 3; i++) old_input[i] = input[i]; /* Saving old data */
-		samples++; _delay_ms(19); /* getting 50 samples per second */
+		samples++; _delay_ms(25); /* getting 50 samples per second */
+		sei();
 	}
 }
 
 void task_get_packet(void) {
-	send_serial('P');
-	_delay_ms(100);
+	while (1){
+		//send_serial('P');
+		_delay_ms(100);
+	}
 }
 
 void task_set_led(void) {
-	send_serial('L');
-	_delay_ms(150);
+	while (1) {
+		//send_serial('L');
+		_delay_ms(100);
+	}
 }

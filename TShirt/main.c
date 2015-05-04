@@ -98,8 +98,8 @@ typedef struct Tache {
 
 /* Global variables */
 Tache taches[NB_TASK] = {
-	{0x700, false, task_send_samples},
-	{0x600, false, task_get_packet},
+	{0x800, false, task_send_samples},
+	{0x650, false, task_get_packet},
 	{0x500, false, task_set_led}
 };
 
