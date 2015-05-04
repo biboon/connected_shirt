@@ -38,7 +38,7 @@ void do_parity (unsigned char* packet) {
         res = false;
         data = packet[29 + j];
         for (i = 0; i < 8; i++) if (data & (b << i)) res = !res;
-        if (!res) packet[28] = packet[28] | (b << j);
+        if (!res) packet[28] = packet[28] | (b << (3 - j));
     }
 }
 
