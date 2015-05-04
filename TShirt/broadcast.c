@@ -1,5 +1,3 @@
-/* Main program going on lilypad */
-
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
@@ -16,10 +14,7 @@ int my_sqrt(int n) {
 	return res;
 }
 
-
-int main(void) {
-	/* Connection initialization */
-	init_printf();
+void task_send_samples(void) {
 	unsigned char input[DATA_LENGTH], old_input[DATA_LENGTH] = {123,123,123}, tmp;
 	unsigned char packet[29 + DATA_LENGTH];
 
@@ -50,5 +45,14 @@ int main(void) {
 		for (i = 0; i < 3; i++) old_input[i] = input[i]; /* Saving old data */
 		samples++; _delay_ms(19); /* getting 50 samples per second */
 	}
+}
 
+void task_get_packet(void) {
+	send_serial('P');
+	_delay_ms(100);
+}
+
+void task_set_led(void) {
+	send_serial('L');
+	_delay_ms(150);
 }
