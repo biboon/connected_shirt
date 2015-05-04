@@ -7,20 +7,20 @@
 #include "http.h"
 
 void threadedTraitementTCP (void* arg) {
-    int sock = *((int *)arg);
-    #ifdef DEBUG
-        fprintf(stderr, "Started new TCP process thread on sock #%d\n", sock);
-    #endif
-    createHttpClient(sock);
+	int sock = *((int *)arg);
+	#ifdef DEBUG
+		fprintf(stderr, "Started new TCP process thread on sock #%d\n", sock);
+	#endif
+	createHttpClient(sock);
 }
 
 void traitementTCP (int sock) {
-    int tmp = sock;
-    if (lanceThread(&threadedTraitementTCP, (void *) &tmp, sizeof(int)) < 0) {
-        perror("traitementTCP.lanceThread"); exit(EXIT_FAILURE);
-    }
+	int tmp = sock;
+	if (lanceThread(&threadedTraitementTCP, (void *) &tmp, sizeof(int)) < 0) {
+		perror("traitementTCP.lanceThread"); exit(EXIT_FAILURE);
+	}
 }
 
 void startTCPServer(void* arg) {
-    serveurTCP((char*)arg, &traitementTCP);
+	serveurTCP((char*)arg, &traitementTCP);
 }

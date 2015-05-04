@@ -10,8 +10,8 @@
 #define VALEURS_MUTEX 41
 
 typedef struct parameters {
-    void (*fonction)(void *);
-    void *argument;
+	void (*fonction)(void *);
+	void *argument;
 } Parameters;
 
 /* Threads */
