@@ -4,6 +4,8 @@
 
 #include "ethernet.h"
 
+static unsigned char my_id = TEAM_ID;
+
 const unsigned char skel_packet[33] = {
 	0x45, 0, 0, 29 + DATA_LENGTH, /* IP */
 	0, TEAM_ID, 64, 0,
@@ -16,12 +18,18 @@ const unsigned char skel_packet[33] = {
 	0};
 
 
+/* updates the id used */
+void set_id(unsigned char lol) { my_id = lol; }
+unsigned char get_id(void) { return my_id; }
+
+
 /* builds the UDP/IP packet */
 void build_packet (unsigned char* data, unsigned char* packet) {
 /* Building base packet with constants and data*/
 	unsigned int i;
 	for (i = 0; i < 29 + DATA_LENGTH; i++) packet[i] = skel_packet[i];
 	for (i = 0; i < DATA_LENGTH; i++) packet[29 + i] = data[i];
+	packet[28] = (my_id << 4) & 0xF0;
 
 	do_parity(packet);
 	do_udp_cksm(packet);

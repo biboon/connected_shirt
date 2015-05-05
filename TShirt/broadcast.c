@@ -1,5 +1,4 @@
 #include <avr/io.h>
-#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <stdio.h>
 
@@ -21,7 +20,6 @@ void task_send_samples(void) {
 
 	int i, samples = 0, angle, diff;
 	while (1) {
-		cli();
 		diff = 0;
 		for (i = 0; i < 3; i++) { /* Calculates squared distance of acceleration difference */
 			ad_init(i);
@@ -32,7 +30,7 @@ void task_send_samples(void) {
 
 		angle = my_sqrt(((int)input[0] * (int)input[0] + (int)input[2] * (int)input[2])) / (int)input[1];
 
-		if (samples > 40) { /* Sending data every 3 second */
+		if (samples > 40) { /* Sending data every X seconds */
 			samples = 0;
 			ad_init(3);
 			input[3] = ad_sample();
@@ -45,21 +43,43 @@ void task_send_samples(void) {
 		}
 
 		for (i = 0; i < 3; i++) old_input[i] = input[i]; /* Saving old data */
-		samples++; _delay_ms(25); /* getting 50 samples per second */
-		sei();
+		samples++;
+		PORTD ^= 0x80;
+		_delay_ms(40);
+		PORTD ^= 0x80;
 	}
 }
 
 void task_get_packet(void) {
+	unsigned char packet[29 + DATA_LENGTH], new_id, old_id;
+
 	while (1){
-		//send_serial('P');
+		slip_recv_packet(packet, 29 + DATA_LENGTH);
+		old_id = (packet[28] & 0xF0) >> 4;
+		new_id = (packet[29] & 0xF0) >> 4;
+		if (old_id == get_id()) set_id(new_id);
+		PORTD ^= 0x40;
+		_delay_ms(40);
+		PORTD ^= 0x40;
+	}
+}
+
+void task_blink_led(void) {
+	while (1) {
+		PORTD ^= 0x20;
 		_delay_ms(100);
 	}
 }
 
-void task_set_led(void) {
+void task_static_led(void) {
 	while (1) {
-		//send_serial('L');
+		PORTD = 0x20;
 		_delay_ms(100);
 	}
+}
+
+void init_led(void) {
+	/* We use port D pins 5-6-7 aka connections 5-6-7 */
+	DDRD = 0xE0;
+	PORTD = 0xE0;
 }

@@ -8,10 +8,13 @@
 #define UDP_SRC_PORT    12007
 #define UDP_DEST_PORT   12345
 
-void build_packet (unsigned char* data, unsigned char* packet);
-void do_ip_cksm (unsigned char* packet);
-void do_udp_cksm (unsigned char* packet);
-void do_parity (unsigned char* packet);
 extern const unsigned char skel_packet[33];
+
+void build_packet(unsigned char* data, unsigned char* packet);
+void do_ip_cksm(unsigned char* packet);
+void do_udp_cksm(unsigned char* packet);
+void do_parity(unsigned char* packet);
+void set_id(unsigned char lol);
+unsigned char get_id(void);
 
 #endif

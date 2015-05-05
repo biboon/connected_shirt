@@ -100,11 +100,10 @@ typedef struct Tache {
 Tache taches[NB_TASK] = {
 	{0x800, false, task_send_samples},
 	{0x650, false, task_get_packet},
-	{0x500, false, task_set_led}
+	{0x500, false, task_blink_led}
 };
 
 int current_task = 0;
-int ticks = 0;
 
 /* Functions */
 void scheduler() {
@@ -132,11 +131,12 @@ ISR(TIMER1_COMPA_vect) {
 
 int main(void) {
 	/* Connection initialization */
-  init_timer();
+	init_timer();
 	init_printf();
-  sei();
-  while(1) {}
-  cli();
+	init_led();
+	sei();
+	while(1) {}
+	cli();
 
-  return 0;
+	return 0;
 }
