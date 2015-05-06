@@ -32,7 +32,7 @@ void hand(int sig) {
 }
 
 
-int main(int argc,char *argv[]) {
+int main(int argc, char *argv[]) {
 	/* Analyzing options */
 	int option = 0;
 	char* portUDP = "12345";
@@ -40,28 +40,27 @@ int main(int argc,char *argv[]) {
 	/* Getting options */
 	while((option = getopt(argc, argv, "p:")) != -1) {
 		if (option == 'p') portUDP = optarg;
-		else fprintf(stderr, "Unrecognized option, using default UDP port\n");
+		else fprintf(stderr, "Unrecognized option, using default UDP port: %s\n", portUDP);
 	}
-	
+
 	/* Signal handling initialization */
 	action.sa_handler = hand;
 	sigaction(SIGINT, &action, NULL);
-	
+
 	/* Mutexes initialization */
 	initMutexes();
-	
 	/* Starting UDP messages server */
 	lanceThread(startUDPServer, (void*) portUDP, sizeof(portUDP));
 	/* Starting TCP server */
 	lanceThread(startTCPServer, (void*) portTCP, sizeof(portTCP));
-	
+
 	/* Main process sleeping while servers are working */
 	while (!_stop) sleep(1);
-	
+
 	/* Waiting for threads to terminate */
 	int timeout = 0;
 	while (getLivingThreads() != 0 && timeout < TIMEOUT) { sleep(1); timeout++; }
 	if (timeout == TIMEOUT) printf("Servers quit: timeout\n");
-	
+
 	return 0;
 }

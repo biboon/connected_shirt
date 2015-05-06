@@ -30,6 +30,7 @@ void stopServers() {
 /**** Fonctions de serveur UDP ****/
 /** Fonction d'envoi de message par udp utilisant le socket sockUDP **/
 int envoiMessage(char* port, unsigned char* message, int taille) {
+	if (sockUDP < 0) { fprintf(stderr, "Invalid UDP socket\n"); return -1; }
 	struct addrinfo precisions, *resultat;
 	int statut;
 
@@ -46,27 +47,43 @@ int envoiMessage(char* port, unsigned char* message, int taille) {
 
 	/* Liberation de la structure d'informations */
 	freeaddrinfo(resultat);
+
+	return nboctets;
 }
 
 
-/** fonction d'envoi de message par UDP avec sockUDP, hote: @serveur, service: port **/
-void envoiMessageUnicast(char *hote, char *service, unsigned char *message, int taille) {
+/** fonction d'envoi de message par UDP, hote: @serveur, service: port **/
+int envoiMessageUnicast(char *hote, char *service, unsigned char *message, int taille) {
 	struct addrinfo precisions, *resultat;
-	int statut;
+	int statut, s;
 
 	/* Creation de l'adresse de socket */
 	memset(&precisions, 0, sizeof precisions);
 	precisions.ai_family = AF_UNSPEC;
 	precisions.ai_socktype = SOCK_DGRAM;
 	statut = getaddrinfo(hote, service, &precisions, &resultat);
-	if (statut < 0) { perror("envoiMessageUnicast.getaddrinfo"); exit(EXIT_FAILURE); }
+	if (statut != 0) { perror("envoiMessageUnicast.getaddrinfo"); printf("%s\n", gai_strerror(statut)); exit(EXIT_FAILURE); }
+
+	/* Creation d'une socket */
+	s = socket(resultat->ai_family, resultat->ai_socktype, resultat->ai_protocol);
+	if (s < 0) { perror("envoiMessageUnicast.socket"); exit(EXIT_FAILURE); }
+
+	/* Option sur la socket */
+	int vrai = 1;
+	statut = setsockopt(s, SOL_SOCKET, SO_BROADCAST, &vrai, sizeof(vrai));
+	if (statut < 0) { perror("envoiMessageUnicast.setsockopt (BROADCAST)"); exit(EXIT_FAILURE); }
 
 	/* Envoi du message */
-	int nboctets = sendto(sockUDP, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
+	int nboctets = sendto(s, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
 	if (nboctets < 0) { perror("envoiMessageUnicast.sento"); exit(EXIT_FAILURE); }
 
 	/* Liberation de la structure d'informations */
 	freeaddrinfo(resultat);
+
+	/* Fermeture de la socket d'envoi */
+	close(s);
+
+	return nboctets;
 }
 
 
@@ -101,6 +118,7 @@ int initialisationSocketUDP(char *service) {
 
 	/* Liberation de la structure d'informations */
 	freeaddrinfo(resultat);
+	sockUDP = s;
 
 	return s;
 }
@@ -135,7 +153,7 @@ void serveurMessages(char *port, void (*traitement)(unsigned char *, int)) {
 	#ifdef DEBUG
 		fprintf(stderr, "Starting UDP messages server on port %s\n", port);
 	#endif
-	sockUDP = initialisationSocketUDP(port);
+	initialisationSocketUDP(port);
 	if (sockUDP < 0) { perror("serveurMessages.initialisationSocketUDP"); exit(EXIT_FAILURE); }
 	#ifdef DEBUG
 		fprintf(stderr, "Socket initialized on sock #%d\n", sockUDP);
