@@ -19,7 +19,7 @@ void fillValeurs(FILE* client, FILE* webpage) {
 	char buffer[MAX_BUFFER], filename[30], byte;
 	int team = 0, cpt = 0, status;
 	FILE* in = NULL;
-	
+
 	byte = fgetc(webpage);
 	while ((byte != '<') && !feof(webpage) && (cpt < MAX_BUFFER)) {
 		buffer[cpt] = byte;
@@ -27,10 +27,10 @@ void fillValeurs(FILE* client, FILE* webpage) {
 		byte = fgetc(webpage);
 	}
 	buffer[cpt] = '\0';
-	
+
 	if (sscanf(buffer, "team_%d", &team) == 1) {
 		/* Getting last data saved in binary file */
-		sprintf(filename, "./www/binaries/team_%d.bin", team);
+		sprintf(filename, "./www/logs/team_%d.bin", team);
 		P(FILE_MUTEX + team);
 		in = fopen(filename, "rb");
 		if (in != NULL) {
@@ -43,7 +43,7 @@ void fillValeurs(FILE* client, FILE* webpage) {
 			}
 			free(read);
 			fclose(in);
-			
+
 			/* Writing data to client */
 			fprintf(client, "<td class=\"name\">%s</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td><td>%d</td>", getTeamName(team), data->i, data->x, data->y, data->z, data->t);
 			fflush(client);
@@ -59,7 +59,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
 	char buffer[MAX_BUFFER], filename[30], byte;
 	int team = 0, cpt = 0, dataCnt = 0, status = 0, nbValues = 0, startIndex;
 	FILE* in = NULL;
-	
+
 	byte = fgetc(webpage);
 	while ((byte != ']') && !feof(webpage) && (cpt < MAX_BUFFER)) {
 		buffer[cpt] = byte;
@@ -67,10 +67,10 @@ void fillGraphes(FILE* client, FILE* webpage) {
 		byte = fgetc(webpage);
 	}
 	buffer[cpt] = '\0';
-	
+
 	if (sscanf(buffer, "team_%d", &team) == 1) {
 		/* Getting data saved in binary file */
-		sprintf(filename, "./www/binaries/team_%d.bin", team);
+		sprintf(filename, "./www/logs/team_%d.bin", team);
 		P(FILE_MUTEX + team);
 		in = fopen(filename, "rb");
 		if (in != NULL) {
@@ -84,7 +84,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
 			#ifdef DEBUG
 				fprintf(stderr, "Successfully read %d objects from %s file\n", nbValues, filename);
 			#endif
-			
+
 			/* Read the file again and write asked data */
 			rewind(in);
 			status = fread(data, sizeof(Message), 1, in);
@@ -102,7 +102,7 @@ void fillGraphes(FILE* client, FILE* webpage) {
 		} else fprintf(stderr, "fillGraphes: Unable to open file %s\n", filename);
 		V(FILE_MUTEX + team);
 	} else fprintf(stderr, "fillGraphes: Bad request\n");
-	
+
 	fputc(byte, client); /* writes the ] character */
 }
 
@@ -117,34 +117,34 @@ int createHttpClient(int socket) {
 	char type[MAX_BUFFER];
 	FILE* webpage = NULL;
 	FILE* client = NULL;
-	
+
 	#ifdef DEBUG
 		printf("Creating new http client on socket %d\n", socket);
 	#endif
-	
+
 	client = fdopen(socket, "r+");
 	if (client == NULL) {
 		fprintf(stderr, "Failed to open the socket %d\n", socket);
 		return -1;
 	}
-	
+
 	if (fgets(buffer, MAX_BUFFER, client) == NULL) {
 		fprintf(stderr, "Client connected on socket %d did not send any data\n", socket);
 		return -1;
 	}
-	
+
 	if (sscanf(buffer, "%s %s %s", cmd, page, proto) != 3) {
 		fprintf(stderr, "Http request from client %d is not correctly formatted\n", socket);
 		return -1;
 	}
-	
+
 	while (fgets(buffer, MAX_BUFFER, client) != NULL)
 		if (strcmp(buffer,"\r\n") == 0) break;
-		
+
 	if (strcmp(cmd, "GET") == 0) {
 		if (strcmp(page, "/") == 0)
 			sprintf(page, "/index.html");
-		
+
 		int code = CODE_OK;
 		struct stat fstat;
 		sprintf(path, "%s%s", WEB_DIR, page);
@@ -163,7 +163,7 @@ int createHttpClient(int socket) {
 		fprintf(client, "Content-length: 30000\r\n");//, (int)fstat.st_size);
 		fprintf(client, "\r\n");
 		fflush(client);
-		
+
 		if (strcmp(page,"/valeurs.html") == 0) P(VALEURS_MUTEX);
 		else if (strcmp(page,"/graphes.html") == 0) P(GRAPHES_MUTEX);
 		webpage = fopen(path, "r");
@@ -187,11 +187,10 @@ int createHttpClient(int socket) {
 		if (strcmp(page,"/valeurs.html") == 0) V(VALEURS_MUTEX);
 		else if (strcmp(page,"/graphes.html") == 0) V(GRAPHES_MUTEX);
 	} else fprintf(stderr, "Command not valid");
-	
+
 	#ifdef DEBUG
 		printf("Http handling ended well, closing sock #%d\n", socket);
 	#endif
 	fclose(client);
 	return 0;
 }
-

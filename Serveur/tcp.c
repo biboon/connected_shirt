@@ -6,6 +6,7 @@
 #include "tcp.h"
 #include "http.h"
 
+
 void threadedTraitementTCP (void* arg) {
 	int sock = *((int *)arg);
 	#ifdef DEBUG
@@ -14,12 +15,14 @@ void threadedTraitementTCP (void* arg) {
 	createHttpClient(sock);
 }
 
+
 void traitementTCP (int sock) {
 	int tmp = sock;
 	if (lanceThread(&threadedTraitementTCP, (void *) &tmp, sizeof(int)) < 0) {
 		perror("traitementTCP.lanceThread"); exit(EXIT_FAILURE);
 	}
 }
+
 
 void startTCPServer(void* arg) {
 	serveurTCP((char*)arg, &traitementTCP);

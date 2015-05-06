@@ -7,7 +7,7 @@
 
 /**** Constantes ****/
 #define UDP_BUFSIZE 5
-#define MAX_CONNEXIONS 8
+#define MAX_CONNEXIONS 16
 
 void stopServers();
 
@@ -16,7 +16,8 @@ int initialisationServeur(char *service, int connexions);
 int boucleServeur(int ecoute, void (*traitement)(int));
 
 /**** Fonctions pour le serveur UDP ****/
-void messageUDP(char *hote, char *service, unsigned char *message, int taille); // Fonction d'envoi de message par UDP, hote: @serveur, service: port
+int envoiMessage(char* port, unsigned char* message, int taille);
+void envoiMessageUnicast(char *hote, char *service, unsigned char *message, int taille); // Fonction d'envoi de message par UDP, hote: @serveur, service: port
 int initialisationSocketUDP(char *service); // Fonction d'initialisation de serveur UDP, service: port
 int boucleServeurUDP(int s, void (*traitement)(unsigned char *, int)); // Fonction de boucle serveur, message traite par fct traitement
 void serveurMessages(char *port, void (*traitement)(unsigned char *, int)); // Fonction de demarrage de serveur UDP et d'ecoute

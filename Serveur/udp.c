@@ -15,7 +15,7 @@
 bool check_parity(unsigned char* packet) {
 	int i = 1, j;
 	bool res = true;
-	unsigned char data, b = 1, tmp, out = 0;
+	unsigned char data, b = 1, tmp;
 	do {
 		data = packet[i];
 		tmp = 1;
@@ -42,7 +42,7 @@ void saveData(unsigned char* packet, int size) {
 
 		/* Saving data in binary file */
 		char filename[30];
-		sprintf(filename, "./www/binaries/team_%d.bin", team);
+		sprintf(filename, "./www/logs/team_%d.bin", team);
 		P(FILE_MUTEX + team);
 		FILE* out = fopen(filename, "ab");
 		fwrite(data, sizeof(Message), 1, out);

@@ -20,6 +20,7 @@
 #include "libcom.h"
 
 
+static int sockUDP = -1;
 static bool _stop = false;
 void stopServers() {
 	_stop = true;
@@ -27,37 +28,45 @@ void stopServers() {
 
 
 /**** Fonctions de serveur UDP ****/
-/** fonction d'envoi de message par UDP, hote: @serveur, service: port **/
-void messageUDP(char *hote, char *service, unsigned char *message, int taille) {
+/** Fonction d'envoi de message par udp utilisant le socket sockUDP **/
+int envoiMessage(char* port, unsigned char* message, int taille) {
 	struct addrinfo precisions, *resultat;
 	int statut;
-	int s;
+
+	/* Creation de l'adresse de socket */
+	memset(&precisions, 0, sizeof precisions);
+	precisions.ai_family = AF_UNSPEC;
+	precisions.ai_socktype = SOCK_DGRAM;
+	statut = getaddrinfo("172.26.79.255", port, &precisions, &resultat);
+	if (statut < 0) { perror("envoiMessage.getaddrinfo"); exit(EXIT_FAILURE); }
+
+	/* Envoi du message */
+	int nboctets = sendto(sockUDP, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
+	if (nboctets < 0) { perror("envoiMessage.sento"); exit(EXIT_FAILURE); }
+
+	/* Liberation de la structure d'informations */
+	freeaddrinfo(resultat);
+}
+
+
+/** fonction d'envoi de message par UDP avec sockUDP, hote: @serveur, service: port **/
+void envoiMessageUnicast(char *hote, char *service, unsigned char *message, int taille) {
+	struct addrinfo precisions, *resultat;
+	int statut;
 
 	/* Creation de l'adresse de socket */
 	memset(&precisions, 0, sizeof precisions);
 	precisions.ai_family = AF_UNSPEC;
 	precisions.ai_socktype = SOCK_DGRAM;
 	statut = getaddrinfo(hote, service, &precisions, &resultat);
-	if (statut < 0) { perror("messageUDPgenerique.getaddrinfo"); exit(EXIT_FAILURE); }
-
-	/* Creation d'une socket */
-	s = socket(resultat->ai_family, resultat->ai_socktype, resultat->ai_protocol);
-	if (s < 0) { perror("messageUDPgenerique.socket"); exit(EXIT_FAILURE); }
-
-	/* Option sur la socket */
-	int vrai = 1;
-	statut = setsockopt(s, SOL_SOCKET, SO_BROADCAST, &vrai, sizeof(vrai));
-	if (statut < 0) { perror("initialisationServeurUDPgenerique.setsockopt (BROADCAST)"); exit(EXIT_FAILURE); }
+	if (statut < 0) { perror("envoiMessageUnicast.getaddrinfo"); exit(EXIT_FAILURE); }
 
 	/* Envoi du message */
-	int nboctets = sendto(s, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
-	if (nboctets < 0) { perror("messageUDPgenerique.sento"); exit(EXIT_FAILURE); }
+	int nboctets = sendto(sockUDP, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
+	if (nboctets < 0) { perror("envoiMessageUnicast.sento"); exit(EXIT_FAILURE); }
 
 	/* Liberation de la structure d'informations */
 	freeaddrinfo(resultat);
-
-	/* Fermeture de la socket d'envoi */
-	close(s);
 }
 
 
@@ -83,6 +92,8 @@ int initialisationSocketUDP(char *service) {
 	int vrai = 1;
 	statut = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &vrai, sizeof(vrai));
 	if (statut < 0) { perror("initialisationServeurUDPgenerique.setsockopt (REUSEADDR)"); exit(EXIT_FAILURE); }
+	statut = setsockopt(s, SOL_SOCKET, SO_BROADCAST, &vrai, sizeof(vrai));
+	if (statut < 0) { perror("initialisationServeurUDPgenerique.setsockopt (BROADCAST)"); exit(EXIT_FAILURE); }
 
 	/* Specification de l'adresse de la socket */
 	statut = bind(s, resultat->ai_addr, resultat->ai_addrlen);
@@ -124,7 +135,7 @@ void serveurMessages(char *port, void (*traitement)(unsigned char *, int)) {
 	#ifdef DEBUG
 		fprintf(stderr, "Starting UDP messages server on port %s\n", port);
 	#endif
-	int sockUDP = initialisationSocketUDP(port);
+	sockUDP = initialisationSocketUDP(port);
 	if (sockUDP < 0) { perror("serveurMessages.initialisationSocketUDP"); exit(EXIT_FAILURE); }
 	#ifdef DEBUG
 		fprintf(stderr, "Socket initialized on sock #%d\n", sockUDP);
@@ -142,7 +153,7 @@ int initialisationServeur(char *service, int connexions) {
 	struct addrinfo precisions, *resultat;
 	int status;
 	int s;
-	
+
 	/* Building address structure */
 	memset(&precisions, 0, sizeof precisions);
 	precisions.ai_family = AF_UNSPEC;
@@ -150,25 +161,25 @@ int initialisationServeur(char *service, int connexions) {
 	precisions.ai_flags = AI_PASSIVE;
 	status = getaddrinfo(NULL, service, &precisions, &resultat);
 	if (status < 0) { perror("initialisationServeur.getaddrinfo"); exit(EXIT_FAILURE); }
-	
+
 	/* Creating socket */
 	s = socket(resultat->ai_family, resultat->ai_socktype, resultat->ai_protocol);
 	if (s < 0) { perror("initialisationServeur.socket"); exit(EXIT_FAILURE); }
-	
+
 	/* Useful options */
 	int vrai = 1;
 	status = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &vrai, sizeof(vrai));
 	if (status < 0) { perror("initialisationServeur.setsockopt (REUSEADDR)"); exit(EXIT_FAILURE); }
 	status = setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &vrai, sizeof(vrai));
 	if (status < 0) { perror("initialisationServeur.setsockopt (NODELAY)"); exit(EXIT_FAILURE); }
-	
+
 	/* Socket address specification */
 	status = bind(s, resultat->ai_addr, resultat->ai_addrlen);
 	if (status < 0) { perror("initialisationServeur.bind"); exit(EXIT_FAILURE); }
-	
+
 	/* Freeing informations structure */
 	freeaddrinfo(resultat);
-	
+
 	/* Size of waiting queue */
 	status = listen(s, connexions);
 	if (status < 0) { perror("initialisationServeur.listen"); exit(EXIT_FAILURE); }
