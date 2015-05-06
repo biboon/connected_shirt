@@ -9,20 +9,21 @@
 #include "broadcast.h"
 
 
-unsigned char led_mode = 0, led_freq = 10; // 0: static, 1: blinking
+static unsigned char led_freq = 100; // 0: static, 1: blinking
 
 
-int my_sqrt(int n) {
-	int res = n >> 1, i;
-	for (i = 0; i < 6; i++) res = (res + n / res) / 2;
-	return res;
-}
-
-void task_send_samples(void) {
-	unsigned char input[DATA_LENGTH], old_input[DATA_LENGTH] = {123,123,123}, tmp;
+void task_send_samples(void) { /* LED PIND7: Green */
+	unsigned char input[DATA_LENGTH], old_input[DATA_LENGTH], tmp;
 	unsigned char packet[29 + DATA_LENGTH];
 
 	int i, samples = 0, angle, diff;
+
+	_delay_cs(50); /* We get first values for initialization */
+	for (i = 0; i < 3; i++) {
+		ad_init(i);
+		old_input[i] = ad_sample();
+	}
+
 	while (1) {
 		diff = 0;
 		for (i = 0; i < 3; i++) { /* Calculates squared distance of acceleration difference */
@@ -32,17 +33,14 @@ void task_send_samples(void) {
 			diff += ((int)tmp * (int)tmp);
 		}
 
-		angle = my_sqrt(((int)input[0] * (int)input[0] + (int)input[2] * (int)input[2])) / (int)input[1];
-
 		if (samples > 40) { /* Sending data every X seconds */
 			samples = 0;
 			ad_init(3);
 			input[3] = ad_sample();
 			build_packet(input, packet);
 			slip_send_packet(packet, 29 + DATA_LENGTH);
-		} else if (diff > 500 && angle > 1) {
+		} else if (diff > 550) {
 			for (i = 0; i < 4; i++) input[i] = 0xFF;
-			led_mode = 1; // blinks the led
 			build_packet(input, packet);
 			slip_send_packet(packet, 29 + DATA_LENGTH);
 		}
@@ -55,7 +53,7 @@ void task_send_samples(void) {
 	}
 }
 
-void task_get_packet(void) {
+void task_get_packet(void) { /* LED PIND6: Blue */
 	unsigned char packet[29 + DATA_LENGTH], new_id, old_id, freq;
 
 	while (1) {
@@ -73,10 +71,9 @@ void task_get_packet(void) {
 	}
 }
 
-void task_blink_led(void) {
+void task_blink_led(void) { /* LED PIND5: Red */
 	while (1) {
-		if (led_mode == 0) PORTD = 0x20;
-		else if (led_mode == 1) PORTD ^= 0x20;
+		PORTD ^= 0x20;
 		_delay_cs(led_freq);
 	}
 }

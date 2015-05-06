@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <stdbool.h>
 
-#include "udp.h"
-
+#include <libthrd.h>
+#include <libcom.h>
+#include "capteurs.h"
 #include "http.h"
 #include "teams.h"
-#include <libcom.h>
-#include <libthrd.h>
+
+#define LED_ACK_FRQ 5
 
 
 bool check_parity(unsigned char* packet) {
@@ -30,7 +32,7 @@ bool check_parity(unsigned char* packet) {
 
 void saveData(unsigned char* packet, int size) {
 	if (size == 5 && check_parity(packet)) {
-		int team = (int) ((packet[0] & 0xF0) >> 4);
+		int team = (int) ((packet[0] & 0xF0) >> 4), i;
 		Message* data = (Message*) malloc(sizeof(Message));
 		/* Putting data in structure */
 		data->i = team;
@@ -39,6 +41,15 @@ void saveData(unsigned char* packet, int size) {
 		data->z = packet[3];
 		data->t = packet[4];
 		data->ts = (long int) time(NULL);
+
+		/* Detecting fall and sending ack */
+		if (team == 0xFF && packet[0] == 0xFF && packet[1] == 0xFF && packet[2] == 0xFF && packet[3] == 0xFF) {
+			unsigned char ack[5] = { ((unsigned char) team << 4), 0, 0, 0, LED_ACK_FRQ };
+			for (i = 0; i < 5; i++) {
+				envoiMessage("54321", ack, 5);
+				usleep(300000);
+			}
+		}
 
 		/* Saving data in binary file */
 		char filename[30];
@@ -56,28 +67,4 @@ void saveData(unsigned char* packet, int size) {
 	#ifdef DEBUG
 		fprintf(stderr, "Finished processing UDP packet\n");
 	#endif
-}
-
-
-void threadedTraitementUDP(void* arg) {
-	UDPParameters* param = arg;
-	#ifdef DEBUG
-		fprintf(stderr, "Started new UDP process thread, packet size: %d\n", param->size);
-	#endif
-	saveData(param->packet, param->size);
-}
-
-void traitementUDP(unsigned char* packet, int size) {
-	int allocated = sizeof(UDPParameters) + size - 1;
-	UDPParameters* param = (UDPParameters*) malloc(allocated);
-	memcpy(param->packet, packet, size);
-	param->size = size;
-	if (lanceThread(&threadedTraitementUDP, (void *) param, allocated) < 0) {
-		perror("traitementUDP.lanceThread"); exit(EXIT_FAILURE);
-	}
-	free(param);
-}
-
-void startUDPServer(void* arg) {
-	serveurMessages((char*)arg, &traitementUDP);
 }

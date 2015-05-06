@@ -73,10 +73,10 @@ int main(int argc, char** argv) {
   unsigned char message[5] = { ((unsigned char) i_dest_team << 4), 0, 0, 0, 0 };
   if (!fflag) message[1] = (unsigned char) i_new_team;
   else message[4] = (i_frq < 255) ? (unsigned char) i_frq : 255;
-  for (i = 0; i < 10; i++) {
+  for (i = 0; i < 5; i++) {
     status = envoiMessageUnicast(ip, port, message, 5);
     if (status < 0) { fprintf(stderr, "envoiMessageUnicast.error\n"); return -1; }
-    usleep(300000);
+    usleep(200000);
   }
   return 0;
 }

@@ -28,20 +28,24 @@ void stopServers() {
 
 
 /**** Fonctions de serveur UDP ****/
-/** Fonction d'envoi de message par udp utilisant le socket sockUDP **/
+/** Fonction d'envoi de message udp broadcast utilisant le socket sockUDP **/
 int envoiMessage(char* port, unsigned char* message, int taille) {
 	if (sockUDP < 0) { fprintf(stderr, "Invalid UDP socket\n"); return -1; }
 	struct addrinfo precisions, *resultat;
 	int statut;
+	char* dest = "172.26.79.255";
 
 	/* Creation de l'adresse de socket */
 	memset(&precisions, 0, sizeof precisions);
 	precisions.ai_family = AF_UNSPEC;
 	precisions.ai_socktype = SOCK_DGRAM;
-	statut = getaddrinfo("172.26.79.255", port, &precisions, &resultat);
+	statut = getaddrinfo(dest, port, &precisions, &resultat);
 	if (statut < 0) { perror("envoiMessage.getaddrinfo"); exit(EXIT_FAILURE); }
 
 	/* Envoi du message */
+	#ifdef DEBUG
+		fprintf(stderr, "Sending broadcast packet via %s:%s size:%d\n", dest, port, taille);
+	#endif
 	int nboctets = sendto(sockUDP, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
 	if (nboctets < 0) { perror("envoiMessage.sento"); exit(EXIT_FAILURE); }
 
@@ -74,6 +78,9 @@ int envoiMessageUnicast(char *hote, char *service, unsigned char *message, int t
 	if (statut < 0) { perror("envoiMessageUnicast.setsockopt (BROADCAST)"); exit(EXIT_FAILURE); }
 
 	/* Envoi du message */
+	#ifdef DEBUG
+		fprintf(stderr, "Sending broadcast packet via %s:%s size:%d\n", hote, service, taille);
+	#endif
 	int nboctets = sendto(s, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
 	if (nboctets < 0) { perror("envoiMessageUnicast.sento"); exit(EXIT_FAILURE); }
 
@@ -90,8 +97,7 @@ int envoiMessageUnicast(char *hote, char *service, unsigned char *message, int t
 /** Fonction d'initialisation de serveur UDP, service: port **/
 int initialisationSocketUDP(char *service) {
 	struct addrinfo precisions, *resultat;
-	int statut;
-	int s;
+	int statut, s;
 
 	/* Construction de la structure adresse */
 	memset(&precisions, 0, sizeof precisions);

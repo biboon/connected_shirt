@@ -13,23 +13,14 @@
 #include <libcom.h>
 #include <libthrd.h>
 #include "http.h"
-#include "tcp.h"
-#include "udp.h"
+#include "serveur.h"
+#include "capteurs.h"
 
 #define TIMEOUT 30
 
 /** Global variables **/
 static bool _stop = false;
 static struct sigaction action;
-
-
-void hand(int sig) {
-	if (sig == SIGINT) {
-		printf("SIGINT signal received, closing servers...\n");
-		stopServers();
-		_stop = true;
-	} else perror("Unrecognized signal received");
-}
 
 
 int main(int argc, char *argv[]) {
@@ -63,4 +54,60 @@ int main(int argc, char *argv[]) {
 	if (timeout == TIMEOUT) printf("Servers quit: timeout\n");
 
 	return 0;
+}
+
+
+/* TCP functions */
+void threadedTraitementTCP (void* arg) {
+	int sock = *((int *)arg);
+	#ifdef DEBUG
+		fprintf(stderr, "Started new TCP process thread on sock #%d\n", sock);
+	#endif
+	createHttpClient(sock);
+}
+
+
+void traitementTCP (int sock) {
+	int tmp = sock;
+	if (lanceThread(&threadedTraitementTCP, (void *) &tmp, sizeof(int)) < 0) {
+		perror("traitementTCP.lanceThread"); exit(EXIT_FAILURE);
+	}
+}
+
+
+void startTCPServer(void* arg) {
+	serveurTCP((char*)arg, &traitementTCP);
+}
+
+/* UDP functions */
+void threadedTraitementUDP(void* arg) {
+	UDPParameters* param = arg;
+	#ifdef DEBUG
+		fprintf(stderr, "Started new UDP process thread, packet size: %d\n", param->size);
+	#endif
+	saveData(param->packet, param->size);
+}
+
+void traitementUDP(unsigned char* packet, int size) {
+	int allocated = sizeof(UDPParameters) + size - 1;
+	UDPParameters* param = (UDPParameters*) malloc(allocated);
+	memcpy(param->packet, packet, size);
+	param->size = size;
+	if (lanceThread(&threadedTraitementUDP, (void *) param, allocated) < 0) {
+		perror("traitementUDP.lanceThread"); exit(EXIT_FAILURE);
+	}
+	free(param);
+}
+
+void startUDPServer(void* arg) {
+	serveurMessages((char*)arg, &traitementUDP);
+}
+
+/* Signals handling function */
+void hand(int sig) {
+	if (sig == SIGINT) {
+		printf("SIGINT signal received, closing servers...\n");
+		stopServers();
+		_stop = true;
+	} else perror("Unrecognized signal received");
 }
