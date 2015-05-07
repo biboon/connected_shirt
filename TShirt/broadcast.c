@@ -16,7 +16,7 @@ void task_send_samples(void) { /* LED PIND7: Green */
 	unsigned char input[DATA_LENGTH], old_input[DATA_LENGTH], tmp;
 	unsigned char packet[29 + DATA_LENGTH];
 
-	int i, samples = 0, angle, diff;
+	int i, samples = 0, diff;
 
 	_delay_cs(50); /* We get first values for initialization */
 	for (i = 0; i < 3; i++) {
@@ -33,23 +33,25 @@ void task_send_samples(void) { /* LED PIND7: Green */
 			diff += ((int)tmp * (int)tmp);
 		}
 
-		if (samples > 40) { /* Sending data every X seconds */
+		if (samples > 30) { /* Sending data every X seconds */
 			samples = 0;
 			ad_init(3);
 			input[3] = ad_sample();
 			build_packet(input, packet);
+			PORTD ^= 0x80;
 			slip_send_packet(packet, 29 + DATA_LENGTH);
+			PORTD ^= 0x80;
 		} else if (diff > 550) {
 			for (i = 0; i < 4; i++) input[i] = 0xFF;
 			build_packet(input, packet);
+			PORTD ^= 0x80;
 			slip_send_packet(packet, 29 + DATA_LENGTH);
+			PORTD ^= 0x80;
 		}
 
 		for (i = 0; i < 3; i++) old_input[i] = input[i]; /* Saving old data */
 		samples++;
-		PORTD ^= 0x80;
-		_delay_ms(40);
-		PORTD ^= 0x80;
+		_delay_ms(30);
 	}
 }
 
@@ -81,7 +83,7 @@ void task_blink_led(void) { /* LED PIND5: Red */
 void init_led(void) {
 	/* We use port D pins 5-6-7 aka connections 5-6-7 */
 	DDRD = 0xE0;
-	PORTD = 0x00;
+	PORTD = 0xE0;
 }
 
 void _delay_cs(int t) {

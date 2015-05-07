@@ -43,9 +43,6 @@ int envoiMessage(char* port, unsigned char* message, int taille) {
 	if (statut < 0) { perror("envoiMessage.getaddrinfo"); exit(EXIT_FAILURE); }
 
 	/* Envoi du message */
-	#ifdef DEBUG
-		fprintf(stderr, "Sending broadcast packet via %s:%s size:%d\n", dest, port, taille);
-	#endif
 	int nboctets = sendto(sockUDP, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
 	if (nboctets < 0) { perror("envoiMessage.sento"); exit(EXIT_FAILURE); }
 
