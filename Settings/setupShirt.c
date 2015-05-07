@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 	int option = 0, status, i;
 	char *port = "54321", *ip = "172.26.79.215";
 	char *new_team = "00", *dest_team = "00";
-	char *frq = "100",;
+	char *frq = "100";
 	int i_frq, i_dest_team, i_new_team;
 	int fflag = 0, dflag = 0, nflag = 0;
 

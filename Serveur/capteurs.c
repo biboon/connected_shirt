@@ -43,8 +43,11 @@ void saveData(unsigned char* packet, int size) {
 		data->ts = (long int) time(NULL);
 
 		/* Detecting fall and sending ack */
-		if (team == 0xFF && packet[0] == 0xFF && packet[1] == 0xFF && packet[2] == 0xFF && packet[3] == 0xFF) {
+		if ((packet[0] & 0x0F) == 0x0F && packet[1] == 0xFF && packet[2] == 0xFF && packet[3] == 0xFF && packet[4] == 0xFF) {
 			unsigned char ack[5] = { ((unsigned char) team << 4), 0, 0, 0, LED_ACK_FRQ };
+			#ifdef DEBUG
+				fprintf(stderr, "Sending fall ack to team %d\n", team);
+			#endif
 			for (i = 0; i < 5; i++) {
 				envoiMessage("54321", ack, 5);
 				usleep(300000);
@@ -56,6 +59,7 @@ void saveData(unsigned char* packet, int size) {
 		sprintf(filename, "./www/logs/team_%d.bin", team);
 		P(FILE_MUTEX + team);
 		FILE* out = fopen(filename, "ab");
+		if (out == NULL) { fprintf(stderr, "saveData: unable to open file %s. Does the folder exist?\n", filename); return; }
 		fwrite(data, sizeof(Message), 1, out);
 		fclose(out);
 		V(FILE_MUTEX + team);

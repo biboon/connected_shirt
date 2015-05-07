@@ -81,7 +81,7 @@ void task_blink_led(void) { /* LED PIND5: Red */
 void init_led(void) {
 	/* We use port D pins 5-6-7 aka connections 5-6-7 */
 	DDRD = 0xE0;
-	PORTD = 0xE0;
+	PORTD = 0x00;
 }
 
 void _delay_cs(int t) {
