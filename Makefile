@@ -7,7 +7,7 @@ export CFLAGS = -g -Wall -DDEBUG
 
 
 # Constantes liees au projet
-DIRS=Communication Threads Serveur Settings
+DIRS=Communication Threads Serveur Tools
 
 # La cible generale
 all: $(patsubst %, _dir_%, $(DIRS))

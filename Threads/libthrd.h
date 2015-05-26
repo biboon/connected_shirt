@@ -5,9 +5,9 @@
 #define MAX_THREADS 100
 
 /* Mutexes indexes */
-#define FILE_MUTEX 20
-#define GRAPHES_MUTEX 40
-#define VALEURS_MUTEX 41
+#define FILE_MUTEX 0
+#define GRAPHES_MUTEX 11
+#define VALEURS_MUTEX 12
 
 typedef struct parameters {
 	void (*fonction)(void *);
@@ -22,6 +22,6 @@ int getLivingThreads();
 /* Mutexes */
 void P(int index);
 void V(int index);
-void initMutexes();
+void initMutexes(int nb, int val);
 
 #endif

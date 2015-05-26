@@ -5,41 +5,72 @@
 #include <pthread.h>
 #include <string.h>
 
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#include <sys/types.h>
+
 #include "libthrd.h"
 
+/* Global variables */
 static int livingThreads = 0;
+static int semid = -1;
 
-static pthread_mutex_t filesMutex[NB_TEAMS];
-static pthread_mutex_t graphesMutex;
-static pthread_mutex_t valeursMutex;
+union semun {
+	int val;
+	struct semid_ds *buf;
+	unsigned short int *array;
+	struct seminfo *__buf;
+};
 
 
-void initMutexes() {
-	int i;
-	for (i = 0; i < NB_TEAMS; i++) {
-		pthread_mutex_init((filesMutex + i), NULL);
-	}
-	pthread_mutex_init(&graphesMutex, NULL);
-	pthread_mutex_init(&valeursMutex, NULL);
+static void sem_alloc(int nb) {
+	#ifdef DEBUG
+		fprintf(stderr, "Creating %d semaphores\n", nb);
+	#endif
+	semid = semget(IPC_PRIVATE, nb, 0666 | IPC_CREAT);
+	if (semid < 0) { perror("libthrd.sem_alloc.semget failed"); exit(EXIT_FAILURE); }
 }
+
+
+/* Initiates the semaphore at value val */
+static void sem_init(int nb, int val) {
+	int status = -1;
+	union semun argument;
+	unsigned short values[nb];
+	/* Initializing semaphore values to val */
+	memset(values, val, nb * sizeof(unsigned short));
+	argument.array = values;
+
+	status = semctl (semid, 0, SETALL, argument);
+	if (status < 0) { perror("libthrd.sem_init.semctl failed"); exit(EXIT_FAILURE); }
+}
+
+
+static int PV(int index, int act) {
+	struct sembuf op;
+	op.sem_num = index;
+	op.sem_op = act; /* P = -1; V = 1 */
+	op.sem_flg = 0;
+
+	return semop(semid, &op, 1);
+}
+
+
+void initMutexes(int nb, int val) {
+	sem_alloc(nb);
+	sem_init(nb, val);
+}
+
 
 void P(int index) {
-	if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
-		pthread_mutex_lock(filesMutex + index);
-	else if (index == GRAPHES_MUTEX)
-		pthread_mutex_lock(&graphesMutex);
-	else if (index == VALEURS_MUTEX)
-		pthread_mutex_lock(&valeursMutex);
+	if (PV(index, -1) < 0) perror ("libthrd.P");
 }
 
+
 void V(int index) {
-	if (index >= FILE_MUTEX && index < FILE_MUTEX + NB_TEAMS)
-		pthread_mutex_unlock(filesMutex + index);
-	else if (index == GRAPHES_MUTEX)
-		pthread_mutex_unlock(&graphesMutex);
-	else if (index == VALEURS_MUTEX)
-		pthread_mutex_unlock(&valeursMutex);
+	if (PV(index, 1) < 0) perror ("libthrd.V");
 }
+
 
 void* lanceFunction(void *arg) {
 	/* Copie de l'argument */
@@ -49,12 +80,12 @@ void* lanceFunction(void *arg) {
 	/* Liberation de la memoire */
 	free(funcParameters->argument);
 	free(funcParameters);
-	
+
 	livingThreads--;
 	#ifdef DEBUG
 		fprintf(stderr, "Thread terminated, total remaining: %d\n", livingThreads);
 	#endif
-	
+
 	pthread_exit(NULL);
 }
 
@@ -67,7 +98,7 @@ int lanceThread(void (*func)(void *), void *arg, int size) {
 		#endif
 		return -5;
 	}
-	
+
 	Parameters* funcParameters = (Parameters*) malloc(sizeof(Parameters));
 	if (funcParameters == NULL) {
 		#ifdef DEBUG
@@ -84,7 +115,7 @@ int lanceThread(void (*func)(void *), void *arg, int size) {
 		return -2;
 	}
 	memcpy(funcParameters->argument, arg, (size_t)size);
-	
+
 	pthread_attr_t attr;
 	pthread_t tid;
 	pthread_attr_init(&attr);
@@ -95,7 +126,7 @@ int lanceThread(void (*func)(void *), void *arg, int size) {
 		#endif
 		return -3;
 	}
-	
+
 	livingThreads++;
 	#ifdef DEBUG
 		fprintf(stderr, "Thread started, total running: %d\n", livingThreads);

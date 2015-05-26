@@ -75,9 +75,6 @@ int envoiMessageUnicast(char *hote, char *service, unsigned char *message, int t
 	if (statut < 0) { perror("envoiMessageUnicast.setsockopt (BROADCAST)"); exit(EXIT_FAILURE); }
 
 	/* Envoi du message */
-	#ifdef DEBUG
-		fprintf(stderr, "Sending broadcast packet via %s:%s size:%d\n", hote, service, taille);
-	#endif
 	int nboctets = sendto(s, message, taille, 0, resultat->ai_addr, resultat->ai_addrlen);
 	if (nboctets < 0) { perror("envoiMessageUnicast.sento"); exit(EXIT_FAILURE); }
 
