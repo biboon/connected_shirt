@@ -3,7 +3,7 @@
 export CC = gcc
 export LD = gcc
 export CLIB = ar cq
-export CFLAGS = -g -Wall -DDEBUG
+export CFLAGS = -Wall
 
 
 # Constantes liees au projet
@@ -20,3 +20,6 @@ clean: $(patsubst %, _clean_%, $(DIRS))
 
 $(patsubst %,_clean_%,$(DIRS)):
 	cd $(patsubst _clean_%,%,$@) && make clean
+
+debug: CFLAGS += -DDEBUG -g
+debug: $(patsubst %, _dir_%, $(DIRS))
