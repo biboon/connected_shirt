@@ -32,6 +32,14 @@ static void sem_alloc(int nb) {
 }
 
 
+void sem_free() {
+	#ifdef DEBUG
+		fprintf(stderr, "Freeing the semaphore\n");
+	#endif
+	int status = semctl (semid, 1, IPC_RMID, NULL);
+	if (status < 0) perror ("libthrd.sem_free.semctl failed");
+}
+
 /* Initiates the semaphore at value val */
 static void sem_init(int nb, int val) {
 	int status = -1;

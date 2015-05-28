@@ -53,6 +53,9 @@ int main(int argc, char *argv[]) {
 	while (getLivingThreads() != 0 && timeout < TIMEOUT) { sleep(1); timeout++; }
 	if (timeout == TIMEOUT) printf("Servers quit: timeout\n");
 
+	/* Freeing the mutexes */
+	sem_free();
+
 	return 0;
 }
 
